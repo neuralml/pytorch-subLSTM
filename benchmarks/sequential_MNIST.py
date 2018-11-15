@@ -35,17 +35,9 @@ train = datasets.MNIST(root=data_path, train=True, transform=transform, download
 test = datasets.MNIST(root=data_path, train=False, transform=transform, download=True)
 
 # Set up the models: LSTM, GRu and SubLSTM (w & w/o fixed forget gates)
-input_size, hidden_size, n_classes = 1, 100, 10
+input_size, hidden_size, n_classes = 1, 50, 10
 
 models = [
-    ('LSTM', RNNClassifier(
-        nn.LSTM(input_size=input_size, hidden_size=hidden_size, batch_first=True),
-        rnn_output_size=hidden_size, n_classes=n_classes
-    )),
-    ('GRU', RNNClassifier(
-        nn.GRU(input_size=input_size, hidden_size=hidden_size, batch_first=True),
-        rnn_output_size=hidden_size, n_classes=n_classes
-    )),
     ('fix-subLSTM', RNNClassifier(
         SubLSTM(input_size=input_size, hidden_size=hidden_size, batch_first=True),
         rnn_output_size=hidden_size, n_classes=n_classes
@@ -54,10 +46,18 @@ models = [
         SubLSTM(input_size=input_size, hidden_size=hidden_size, fixed_forget=False, batch_first=True),
         rnn_output_size=hidden_size, n_classes=n_classes
     )),
+    ('LSTM', RNNClassifier(
+        nn.LSTM(input_size=input_size, hidden_size=hidden_size, batch_first=True),
+        rnn_output_size=hidden_size, n_classes=n_classes
+    )),
+    ('GRU', RNNClassifier(
+        nn.GRU(input_size=input_size, hidden_size=hidden_size, batch_first=True),
+        rnn_output_size=hidden_size, n_classes=n_classes
+    ))
 ]
 
 # Training Parameters
-epochs, batch_size, learning_rate, momentum = 10, 200, 1e-4, 0.9
+epochs, batch_size, learning_rate, momentum = 100, 200, 1e-4, 0.9
 
 # Create a folder to store the results
 results_path = os.getcwd() + '/benchmarks/results/all_models-E=10-BS=200-lr=1e-4'
@@ -65,7 +65,7 @@ if not os.path.exists(results_path):
     os.makedirs(results_path)
 
 results = {}
-save_period = 1  # save every 200 mini-batches
+save_period = 200  # save every 200 mini-batches
 
 train_loader = DataLoader(train, batch_size=batch_size)
 criterion = torch.nn.NLLLoss()
