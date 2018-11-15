@@ -137,7 +137,6 @@ class SubLSTM(nn.Module):
                 weight.data.uniform_(-std, std)
 
     def forward(self, input: torch.Tensor, hx: torch.Tensor=None):
-        timesteps = input.size(1) if self.batch_first else input.size(0)
 
         # TODO: Check docs later and add the packed sequence option and the bidirectional version
         # is_packed = isinstance(input, PackedSequence)
@@ -161,6 +160,7 @@ class SubLSTM(nn.Module):
         if self.batch_first:
             input = input.transpose(0, 1)
 
+        timesteps = input.size(1) if self.batch_first else input.size(0)
         outputs = [input[i] for i in range(timesteps)]
 
         for time in range(timesteps):

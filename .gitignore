@@ -3,4 +3,5 @@
 .venv
 subLSTM.code-workspace
 /*/__pycache__/
+/benchmarks/results/*
 /benchmarks/data/MNIST
