@@ -14,7 +14,7 @@ sys.path.insert(0, '.')
 
 from src.subLSTM import SubLSTM
 from src.wrappers import RNNClassifier
-from benchmarks.training import train
+from benchmarks.training import train, test
 
 # Set the device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -57,27 +57,35 @@ models = [
 ]
 
 # Training Parameters
-epochs, batch_size, learning_rate, momentum = 100, 200, 1e-4, 0.9
+epochs, batch_size, learning_rate, momentum = 40, 200, 1e-4, 0.9
 
 # Create a folder to store the results
 results_path = os.getcwd() + '/benchmarks/results/all_models-E=10-BS=200-lr=1e-4'
 if not os.path.exists(results_path):
     os.makedirs(results_path)
 
-results = {}
-log_interval = 200  # save every 200 mini-batches
+training_results, test_results = {}, {}
+log_interval = batch_size  # save every 200 mini-batches
 
 # Set up training
 train_data_loader = DataLoader(train_data, batch_size=batch_size)
+test_data_loader = DataLoader(test_data, batch_size=batch_size)
 criterion = torch.nn.CrossEntropyLoss()
 
 for name, rnn in models:
-    print('Training model: {}'.format(name))
+    print('Training {}...'.format(name))
     # Train the model using the specified parameters
     optimizer = optim.RMSprop(rnn.parameters(), lr=learning_rate, momentum=momentum)
-    results[name] = train(rnn, train_data_loader, optimizer, criterion, epochs, log_interval)
+    training_results[name] = train(rnn, train_data_loader, optimizer, criterion, epochs, log_interval)
 
-    print('Finished training model: {0}\n\t Final loss {1}'.format(name, results[name][-1]))
+    print('Finished training model: {0}\n\tFinal training loss {1}\n\tTesting...'.format(name, training_results[name][-1]))
 
-results = pd.DataFrame.from_dict(results)
-results.to_csv(path_or_buf=results_path + '/training_results.csv')
+    test_results[name] = test(rnn, test_data_loader, criterion)
+    print('Test loss: {0}'.format(test_results[name]))
+
+
+training_results = pd.DataFrame.from_dict(training_results)
+training_results.to_csv(path_or_buf=results_path + '/training_results.csv')
+
+test_results = pd.DataFrame.from_dict(test_results)
+test_results.to_csv(path_or_buf=results_path + '/testing_results.csv')

@@ -1,4 +1,4 @@
-import numpy as np
+import torch
 import torch.nn as nn
 
 
@@ -15,15 +15,14 @@ class RNNClassifier(nn.Module):
         else:
             raise ValueError()
 
+        # Use this for later
         self._mode = True
 
     def forward(self, input):
         output = self.rnn(input)[0]
         probs = self.output_layer(self.linear(output[:, -1, :]))
         
-        if self._mode:
-            return probs
-        return np.argmax(probs, axis=0)
+        return probs
 
     def set_train(self):
         self._mode = True

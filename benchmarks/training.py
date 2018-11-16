@@ -27,9 +27,6 @@ def train(model, data_loader, optimizer, criterion, epochs, log_interval):
                 loss_trace.append(running_loss / log_interval)
                 running_loss = 0.0
 
-        # record the losses for each model
-        loss_trace[-1] /= (i + 1)
-
     return loss_trace
 
 def test(model, data_loader, criterion):
