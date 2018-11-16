@@ -83,7 +83,7 @@ class SubLSTM(nn.Module):
 
         num_gates = 3 if fixed_forget else 4
 
-        self._all_weights = []
+        self._all_params = []
         # Use for bidirectional later
         suffix = ''
 
@@ -98,7 +98,6 @@ class SubLSTM(nn.Module):
             w_h = nn.Parameter(torch.Tensor(gate_size, layer_out_size))
 
             layer_param = [w_i, w_h]
-
             name_template = ['W_{}{}', 'R_{}{}']
 
             if bias:
@@ -114,27 +113,27 @@ class SubLSTM(nn.Module):
                 layer_param.append(f)
                 name_template.append('f_{}{}')
 
-            param_name = [x.format(layer_num, suffix) for x in name_template]
-            for name, value in zip(param_name, layer_param):
+            param_names = [x.format(layer_num, suffix) for x in name_template]
+            for name, value in zip(param_names, layer_param):
                 setattr(self, name, value)
 
-            self._all_weights.append(param_name)
+            self._all_params.append(param_names)
 
         self.flatten_parameters()
         self.reset_parameters()
 
     @property
     def all_weights(self):
-        return [[getattr(self, weights) for weights in weights] for weights in self._all_weights]
+        return [[getattr(self, name) for name in param_names] for param_names in self._all_params]
 
     def flatten_parameters(self):
         pass
 
     def reset_parameters(self):
-        for hidden_size in self.hidden_size:
+        for l, hidden_size in enumerate(self.hidden_size):
             std = 1.0 / math.sqrt(hidden_size)
-            for weight in self.parameters():
-                weight.data.uniform_(-std, std)
+            for name in self._all_params[l]:
+                getattr(self, name).data.uniform_(-std, std)
 
     def forward(self, input: torch.Tensor, hx: torch.Tensor=None):
 
