@@ -1,7 +1,7 @@
 /.vscode/
 /.idea/
-.venv
-subLSTM.code-workspace
+/.venv
 /*/__pycache__/
-/benchmarks/results/*
-/benchmarks/data/MNIST
+/benchmarks/seqMNIST/results/*
+/benchmarks/seqMNIST/data/MNIST
+*.sh
