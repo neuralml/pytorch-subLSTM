@@ -159,7 +159,7 @@ class SubLSTM(nn.Module):
         if self.batch_first:
             input = input.transpose(0, 1)
 
-        timesteps = input.size(1) if self.batch_first else input.size(0)
+        timesteps = input.size(0)
         outputs = [input[i] for i in range(timesteps)]
 
         for time in range(timesteps):
