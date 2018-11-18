@@ -27,13 +27,13 @@ from benchmarks.utils import train, test, init_model
 parser = argparse.ArgumentParser(description='PyTorch Sequential MNIST LSTM model test')
 
 parser.add_argument(
-    '--data', type=str, default='./benchmarks/seqMNIST/data/MNIST', help='location of the data set')
+    '--data', type=str, default='./benchmarks/seqMNIST/MNIST', help='location of the data set')
 parser.add_argument(
     '--model', type=str, default='subLSTM', 
     help='RNN model tu use. One of subLSTM|fix-subLSTM|LSTM|GRU')
 parser.add_argument('--nlayers', type=int, default=1,
     help='number of layers')
-parser.add_argument('--nhid', type=int, default=200,
+parser.add_argument('--nhid', type=int, default=50,
     help='number of hidden units per layer')
 parser.add_argument('--lr', type=float, default=1e-4,
     help='initial learning rate')
@@ -43,7 +43,7 @@ parser.add_argument('--optim', type=str, default='rmsprop',
     help='learning rule, supports adam|sparseadam|adamax|rmsprop|sgd|adagrad|adadelta')
 parser.add_argument('--epochs', type=int, default=40,
     help='max number of training epochs')
-parser.add_argument('--batch_size', type=int, default=20, metavar='N',
+parser.add_argument('--batch_size', type=int, default=200, metavar='N',
     help='batch size')
 parser.add_argument('--seed', type=int, default=1111,
     help='random seed')
@@ -59,7 +59,7 @@ args = parser.parse_args()
 print('Training {} model with parameters:' \
     '\n\tnumber of layers: {}'\
     '\n\thidden units: {}'\
-    '\n\tepochs: {}'\
+    '\n\tmax epochs: {}'\
     '\n\tbatch size: {}' \
     '\n\toptimizer: {}'.format(
         args.model, args.nlayers, args.nhid, args.epochs, args.batch_size, args.optim
@@ -68,14 +68,14 @@ print('Training {} model with parameters:' \
 torch.manual_seed(args.seed)
 if torch.cuda.is_available():
     if not args.cuda:
-        print('\tUsing CPU\n\tWARNING: CUDA device available but not being used.' \
-         'Run with --cuda option to enable it.')
+        print('\tusing CPU\n\tWARNING: CUDA device available but not being used.' \
+         'run with --cuda option to enable it.')
 
     else:
         torch.cuda.manual_seed(args.seed)
-        print('\tUsing CUDA device')
+        print('\tusing CUDA device')
 else:
-    print('\tUsing CPU')
+    print('\tusing CPU')
 
 print()
 

@@ -3,5 +3,4 @@
 /.venv
 /*/__pycache__/
 /benchmarks/seqMNIST/results/*
-/benchmarks/seqMNIST/data/MNIST
-*.sh
+/benchmarks/seqMNIST/MNIST
