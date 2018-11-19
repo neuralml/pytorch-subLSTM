@@ -4,7 +4,8 @@ import torch.nn as nn
 from src.subLSTM import SubLSTM
 from src.wrappers import RNNClassifier
 
-def init_model(model_type, input_size, n_layers, hidden_size, output_size, use_cuda=False, class_task=True):
+def init_model(model_type, input_size, n_layers, hidden_size, output_size,
+                device, class_task=True):
     if model_type == 'subLSTM':
         rnn = SubLSTM(
             input_size=input_size,
@@ -13,7 +14,7 @@ def init_model(model_type, input_size, n_layers, hidden_size, output_size, use_c
             fixed_forget=False, 
             batch_first=True
         )
-        
+
     elif model_type == 'fix-subLSTM':
         rnn = SubLSTM(
             input_size=input_size,
@@ -43,12 +44,11 @@ def init_model(model_type, input_size, n_layers, hidden_size, output_size, use_c
         raise ValueError('Unrecognized RNN type')
 
     if class_task:
-        model = RNNClassifier(rnn, rnn_output_size=hidden_size, n_classes=output_size)
+        model = RNNClassifier(
+            rnn=rnn, rnn_output_size=hidden_size, n_classes=output_size
+        ).to(device=device)
     else:
         raise NotImplementedError()
-
-    if use_cuda:
-        model.cuda()
 
     return model
 
