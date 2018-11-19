@@ -69,14 +69,16 @@ print('Training {} model with parameters:' \
 torch.manual_seed(args.seed)
 if torch.cuda.is_available():
     if not args.cuda:
+        use_cuda = False
         print('\tusing CPU\n\tWARNING: CUDA device available but not being used.' \
          'run with --cuda option to enable it.')
-
     else:
         torch.cuda.manual_seed(args.seed)
+        use_cuda = True
         print('\tusing CUDA device')
 else:
     print('\tusing CPU')
+    use_cuda = False
 
 print()
 
@@ -107,7 +109,7 @@ input_size, hidden_size, n_classes = 1, args.nhid, 10
 model = init_model(
     model_type=args.model,
     n_layers=args.nlayers, hidden_size=args.nhid,
-    input_size=1, output_size=10, 
+    input_size=1, output_size=10, use_cuda=use_cuda,
     class_task=True
 )
 
