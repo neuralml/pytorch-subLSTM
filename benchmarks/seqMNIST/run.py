@@ -43,7 +43,7 @@ parser.add_argument('--optim', type=str, default='rmsprop',
     help='learning rule, supports adam|sparseadam|adamax|rmsprop|sgd|adagrad|adadelta')
 parser.add_argument('--epochs', type=int, default=40,
     help='max number of training epochs')
-parser.add_argument('--batch_size', type=int, default=200, metavar='N',
+parser.add_argument('--batch-size', type=int, default=200, metavar='N',
     help='batch size')
 parser.add_argument('--seed', type=int, default=1111,
     help='random seed')
@@ -61,8 +61,9 @@ print('Training {} model with parameters:' \
     '\n\thidden units: {}'\
     '\n\tmax epochs: {}'\
     '\n\tbatch size: {}' \
-    '\n\toptimizer: {}'.format(
-        args.model, args.nlayers, args.nhid, args.epochs, args.batch_size, args.optim
+    '\n\toptimizer: {}, lr={}'.format(
+        args.model, args.nlayers, args.nhid, args.epochs,
+        args.batch_size, args.optim, args.lr
 ))
 
 torch.manual_seed(args.seed)
@@ -128,6 +129,8 @@ elif args.optim == 'adagrad':
   optimizer = optim.Adagrad(model.parameters(), lr=args.lr)
 elif args.optim == 'adadelta':
     optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
+else:
+    raise ValueError(r'Optimizer {0} not recognized'.format(args.optim))
 
 criterion = nn.CrossEntropyLoss()
 
@@ -143,7 +146,7 @@ if not os.path.exists(save_path):
     os.makedirs(save_path)
 
 for e in range(epochs):
-    print('training epoch {}'.format(e + 1))
+    print('training epoch {0}'.format(e + 1))
     start_time = time.time()
 
     # Train model for 1 epoch over whole dataset

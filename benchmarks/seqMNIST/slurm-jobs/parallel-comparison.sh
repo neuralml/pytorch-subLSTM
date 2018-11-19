@@ -16,25 +16,25 @@ module add libs/cudnn/9.0-cuda-9.0
 echo 'Comparing LSTM variants on sequential MNIST'
 
 srun python benchmarks/seqMNIST/run.py  \
-    --model subLSTM --nlayers 1 --nhid 50 
-    --lr 10e-4 --optim rmsrop --epochs 40 --batch-size 200 \
+    --model subLSTM --nlayers 1 --nhid 50 \
+    --lr 10e-4 --optim rmsprop --epochs 40 --batch-size 200 \
     --seed 18092 --cuda --log-interval 200 \
     --save ./benchmarks/seqMNIST/results
 
 srun python benchmarks/seqMNIST/run.py  \
-    --model fix-subLSTM --nlayers 1 --nhid 50 
-    --lr 10e-4 --optim rmsrop --epochs 40 --batch-size 200 \
+    --model fix-subLSTM --nlayers 1 --nhid 50 \
+    --lr 10e-4 --optim rmsprop --epochs 40 --batch-size 200 \
     --seed 18092 --cuda --log-interval 200 \
     --save ./benchmarks/seqMNIST/results
 
 srun python benchmarks/seqMNIST/run.py  \
-    --model LSTM --nlayers 1 --nhid 50 
-    --lr 10e-4 --optim rmsrop --epochs 40 --batch-size 200 \
+    --model LSTM --nlayers 1 --nhid 50 \
+    --lr 10e-4 --optim rmsprop --epochs 40 --batch-size 200 \
     --seed 18092 --cuda --log-interval 200 \
     --save ./benchmarks/seqMNIST/results
 
 srun python benchmarks/seqMNIST/run.py  \
-    --model GRU --nlayers 1 --nhid 50 
-    --lr 10e-4 --optim rmsrop --epochs 40 --batch-size 200 \
+    --model GRU --nlayers 1 --nhid 50 \
+    --lr 10e-4 --optim rmsprop --epochs 40 --batch-size 200 \
     --seed 18092 --cuda --log-interval 200 \
     --save ./benchmarks/seqMNIST/results

@@ -18,7 +18,7 @@ def init_model(model_type, input_size, n_layers, hidden_size, output_size, class
             input_size=input_size,
             hidden_size=hidden_size,
             num_layers=n_layers,
-            fixed_forget=FalsTrue, 
+            fixed_forget=True, 
             batch_first=True
         )
     
