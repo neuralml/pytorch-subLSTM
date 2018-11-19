@@ -74,7 +74,7 @@ if torch.cuda.is_available():
          'run with --cuda option to enable it.')
     else:
         torch.cuda.manual_seed(args.seed)
-        device = torch.device('gpu')
+        device = torch.device('cuda')
         print('\tusing CUDA device')
 else:
     print('\tusing CPU')
@@ -88,7 +88,6 @@ print()
 
 transform = trans.Compose([
     trans.ToTensor(),
-    trans.Lambda(lambda x: x.to(device=device)),
     trans.Lambda(lambda x: x.view(-1, 1))
 ])
 
@@ -153,13 +152,13 @@ for e in range(epochs):
     start_time = time.time()
 
     # Train model for 1 epoch over whole dataset
-    epoch_trace = train(model, train_data, optimizer, criterion, log_interval)
+    epoch_trace = train(model, train_data, optimizer, criterion, log_interval, device)
     loss_trace.extend(epoch_trace)
 
     print('epoch {} finished, \n\ttotal time {}, \n\ttraining_loss = {:5.4f}'.format(
         e + 1, time.time() - start_time, np.sum(epoch_trace) / len(epoch_trace)))
 
-    val_loss = test(model, train_data, criterion)
+    val_loss = test(model, train_data, criterion, device)
 
     if val_loss < best_loss:
         with open(save_path + '/model.txt', 'wb') as f:
@@ -176,5 +175,5 @@ pd.DataFrame.from_dict({args.model: loss_trace}).to_csv(path_or_buf=save_path + 
 with open(save_path + '/model.txt', 'rb') as f:
     model = torch.load(f)
 
-test_loss = test(model, test_data, criterion)
+test_loss = test(model, test_data, criterion, device)
 print('Training ended:\n\t test loss {:5.2f}'.format(test_loss))

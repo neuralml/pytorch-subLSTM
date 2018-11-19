@@ -6,7 +6,7 @@
 #SBATCH --nodes=4
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:2
-#SBATCH --time=10:0:0
+#SBATCH --time=5:0:0
 #SBATCH --mem=2500M
 
 module add languages/anaconda3/5.2.0-tflow-1.11
@@ -17,24 +17,24 @@ echo 'Comparing LSTM variants on sequential MNIST'
 
 srun python benchmarks/seqMNIST/run.py  \
     --model subLSTM --nlayers 1 --nhid 50 \
-    --lr 10e-4 --optim rmsprop --epochs 40 --batch-size 200 \
-    --seed 18092 --cuda --log-interval 200 \
+    --lr 10e-4 --optim rmsprop --epochs 40 --batch-size 50 \
+    --seed 18092 --cuda --log-interval 50 \
     --save ./benchmarks/seqMNIST/results
 
 srun python benchmarks/seqMNIST/run.py  \
     --model fix-subLSTM --nlayers 1 --nhid 50 \
-    --lr 10e-4 --optim rmsprop --epochs 40 --batch-size 200 \
-    --seed 18092 --cuda --log-interval 200 \
+    --lr 10e-4 --optim rmsprop --epochs 40 --batch-size 50 \
+    --seed 18092 --cuda --log-interval 50 \
     --save ./benchmarks/seqMNIST/results
 
 srun python benchmarks/seqMNIST/run.py  \
     --model LSTM --nlayers 1 --nhid 50 \
-    --lr 10e-4 --optim rmsprop --epochs 40 --batch-size 200 \
-    --seed 18092 --cuda --log-interval 200 \
+    --lr 10e-4 --optim rmsprop --epochs 40 --batch-size 50 \
+    --seed 18092 --cuda --log-interval 50 \
     --save ./benchmarks/seqMNIST/results
 
 srun python benchmarks/seqMNIST/run.py  \
     --model GRU --nlayers 1 --nhid 50 \
-    --lr 10e-4 --optim rmsprop --epochs 40 --batch-size 200 \
-    --seed 18092 --cuda --log-interval 200 \
+    --lr 10e-4 --optim rmsprop --epochs 40 --batch-size 50 \
+    --seed 18092 --cuda --log-interval 50 \
     --save ./benchmarks/seqMNIST/results

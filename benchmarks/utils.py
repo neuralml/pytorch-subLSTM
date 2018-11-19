@@ -53,36 +53,42 @@ def init_model(model_type, input_size, n_layers, hidden_size, output_size,
     return model
 
 
-def train(model, data_loader, optimizer, criterion, log_interval):
+def train(model, data_loader, optimizer, criterion, log_interval, device):
     model.set_train()
     loss_trace, running_loss = [], 0.0
+    dataset_size, batch_size = len(data_loader.dataset), data_loader.batch_size, 
 
     for i, data in enumerate(data_loader):
+        # Load one batch into the device being used.
         inputs, labels = data
+        inputs, labels = inputs.to(device), labels.to(device)
+
+        # Set all gradients to zero
         optimizer.zero_grad()
 
-        # Forward, backwards and optimization step
+        # Forward, backward and optimization step.
         loss = criterion(model(inputs), labels)
         loss.backward()
         optimizer.step()
 
         running_loss += loss.item()
 
-        if i % log_interval == log_interval - 1:  # print every 200 mini-batches
-            print('\t[batch %5d] loss: %.3f' %
-                (i + 1, running_loss / log_interval))
+        # Print the loss every log-interval mini-batches and save it to the trace
+        if i % log_interval == log_interval - 1:
+            print('\t[batches %5d / %5d] loss: %.3f' %
+                ((i + 1) * batch_size, dataset_size, running_loss / log_interval))
             loss_trace.append(running_loss / log_interval)
-            running_loss = 0.0      
+            running_loss = 0.0
 
     return loss_trace
 
-def test(model, data_loader, criterion):
+def test(model, data_loader, criterion, device):
     total_loss = 0.0
     model.set_eval()
 
     for i, data in enumerate(data_loader):
         inputs, labels = data
+        inputs, labels = inputs.to(device), labels.to(device)
         total_loss += criterion(model(inputs), labels)
-        break
 
     return total_loss / (i + 1)
