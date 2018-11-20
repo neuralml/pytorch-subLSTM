@@ -70,8 +70,8 @@ torch.manual_seed(args.seed)
 if torch.cuda.is_available():
     if not args.cuda:
         device = torch.device('cpu')
-        print('\tusing CPU\n\tWARNING: CUDA device available but not being used.' \
-         'run with --cuda option to enable it.')
+        print('\tusing CPU\n\tWARNING: CUDA device available but not being used. \
+            run with --cuda option to enable it.')
     else:
         torch.cuda.manual_seed(args.seed)
         device = torch.device('cuda')
@@ -95,10 +95,10 @@ transform = trans.Compose([
 data_path, batch_size = args.data, args.batch_size
 
 train_data = dataset.MNIST(root=data_path, train=True, transform=transform, download=True)
-train_data = DataLoader(train_data, batch_size=batch_size)
+train_data = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 
 test_data = dataset.MNIST(root=data_path, train=False, transform=transform, download=True)
-test_data = DataLoader(test_data, batch_size=batch_size)
+test_data = DataLoader(test_data, batch_size=batch_size, shuffle=True)
 
 ###################################################################################################
 # CREATE THE MODEL
@@ -109,8 +109,8 @@ input_size, hidden_size, n_classes = 1, args.nhid, 10
 model = init_model(
     model_type=args.model,
     n_layers=args.nlayers, hidden_size=args.nhid,
-    input_size=1, output_size=10, device=device,
-    class_task=True
+    input_size=1, output_size=10, class_task=True,
+    device=device,
 )
 
 ###################################################################################################
@@ -147,23 +147,37 @@ save_path = args.save + '/{0}_{1}_{2}'.format(args.model, args.nlayers, args.nhi
 if not os.path.exists(save_path):
     os.makedirs(save_path)
 
-for e in range(epochs):
-    print('training epoch {0}'.format(e + 1))
-    start_time = time.time()
+try:
+    for e in range(epochs):
+        print('training epoch {0}'.format(e + 1))
+        start_time = time.time()
 
-    # Train model for 1 epoch over whole dataset
-    epoch_trace = train(model, train_data, optimizer, criterion, log_interval, device)
-    loss_trace.extend(epoch_trace)
+        # Train model for 1 epoch over whole dataset
+        epoch_trace = train(
+            model=model, data_loader=train_data, 
+            criterion=criterion, optimizer=optimizer, grad_clip=args.clip,
+            log_interval=log_interval,
+            device=device
+        )
 
-    print('epoch {} finished, \n\ttotal time {}, \n\ttraining_loss = {:5.4f}'.format(
-        e + 1, time.time() - start_time, np.sum(epoch_trace) / len(epoch_trace)))
+        loss_trace.extend(epoch_trace)
 
-    val_loss = test(model, train_data, criterion, device)
+        # Check validation loss
+        val_loss = test(model, train_data, criterion, device)
 
-    if val_loss < best_loss:
-        with open(save_path + '/model.txt', 'wb') as f:
-            torch.save(model, f)
-        best_loss = val_loss
+        print('epoch {} finished \
+            \n\ttotal time {} \
+            \n\ttraining_loss = {:5.4f} \
+            \n\tvalidation_loss = {:5.4f}'.format(
+                e + 1, time.time() - start_time, np.sum(epoch_trace) / len(epoch_trace), val_loss))
+
+        if val_loss < best_loss:
+            with open(save_path + '/model.txt', 'wb') as f:
+                torch.save(model, f)
+            best_loss = val_loss
+    
+except KeyboardInterrupt:
+    print('Keyboard interruption. Exiting training.')
 
 # Save the trace of the loss during training
 pd.DataFrame.from_dict({args.model: loss_trace}).to_csv(path_or_buf=save_path + '/trace.csv')

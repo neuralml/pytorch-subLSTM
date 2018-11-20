@@ -1,6 +1,6 @@
 /.vscode/
 /.idea/
-/.venv
+/venv
 /*/__pycache__/
 /benchmarks/seqMNIST/results/*
 /benchmarks/seqMNIST/MNIST

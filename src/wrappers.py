@@ -18,14 +18,9 @@ class RNNClassifier(nn.Module):
         # Use this for later
         self._mode = True
 
-    def forward(self, input):
-        output = self.rnn(input)[0]
+    def forward(self, input, hidden=None):
+        output, hidden = self.rnn(input, hidden)
         probs = self.output_layer(self.linear(output[:, -1, :]))
         
-        return probs
-
-    def set_train(self):
-        self._mode = True
-
-    def set_eval(self):
-        self._mode = False
+        return probs, hidden
+    

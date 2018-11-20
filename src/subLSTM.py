@@ -126,16 +126,16 @@ class SubLSTM(nn.Module):
     def all_weights(self):
         return [[getattr(self, name) for name in param_names] for param_names in self._all_params]
 
-    def flatten_parameters(self):
-        pass
-
     def reset_parameters(self):
         for l, hidden_size in enumerate(self.hidden_size):
             std = 1.0 / math.sqrt(hidden_size)
             for name in self._all_params[l]:
                 getattr(self, name).data.uniform_(-std, std)
 
-    def forward(self, input: torch.Tensor, hx: torch.Tensor=None):
+    def flatten_parameters(self):
+        pass
+
+    def forward(self, input, hx=None):
 
         # TODO: Check docs later and add the packed sequence option and the bidirectional version
         # is_packed = isinstance(input, PackedSequence)
@@ -152,7 +152,8 @@ class SubLSTM(nn.Module):
         if hx is None:
             hx = []
             for l in range(self.num_layers):
-                hidden = torch.zeros((max_batch_size, self.hidden_size[l]), requires_grad=False)
+                # use input.new_zeros so dtype and device are the same as the input's
+                hidden = input.new_zeros((max_batch_size, self.hidden_size[l]), requires_grad=False)
                 hx.append((hidden, hidden))
 
         Ws = self.all_weights
