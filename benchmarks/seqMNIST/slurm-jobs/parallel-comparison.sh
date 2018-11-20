@@ -7,7 +7,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:2
 #SBATCH --time=5:0:0
-#SBATCH --mem=2500M
+#SBATCH --mem=16000M
 
 module add languages/anaconda3/5.2.0-tflow-1.11
 module add libs/cuda/9.0-gcc-5.4.0-2.26
