@@ -45,6 +45,8 @@ parser.add_argument('--epochs', type=int, default=40,
     help='max number of training epochs')
 parser.add_argument('--batch-size', type=int, default=200, metavar='N',
     help='batch size')
+parser.parse_args('--train-test-split', type=float, default=0.2,
+    help='proportion of trainig data used for validation')
 parser.add_argument('--seed', type=int, default=1111,
     help='random seed')
 parser.add_argument('--cuda', action='store_true',
@@ -95,7 +97,14 @@ transform = trans.Compose([
 data_path, batch_size = args.data, args.batch_size
 
 train_data = dataset.MNIST(root=data_path, train=True, transform=transform, download=True)
+
+# Split train data into training and validation sets
+N = len(train_data)
+val_size = int(N * 0.2)
+train_data, validation_data = torch.utils.data.random_split(train_data, [N - val_size, val_size])
+
 train_data = DataLoader(train_data, batch_size=batch_size, shuffle=True)
+validation_data = DataLoader(validation_data, batch_size=batch_size, shuffle=True)
 
 test_data = dataset.MNIST(root=data_path, train=False, transform=transform, download=True)
 test_data = DataLoader(test_data, batch_size=batch_size, shuffle=True)
@@ -163,7 +172,7 @@ try:
         loss_trace.extend(epoch_trace)
 
         # Check validation loss
-        val_loss = test(model, train_data, criterion, device)
+        val_loss = test(model, validation_data, criterion, device)
 
         print('epoch {} finished \
             \n\ttotal time {} \
