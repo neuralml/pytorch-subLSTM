@@ -56,13 +56,13 @@ def init_model(model_type, input_size, n_layers, hidden_size, output_size,
 
 def detach_hidden_state(hidden_state):
     """
-    Use this method to detach the hidden state from the previous batch history.
-    This way we can use one hidden state initizalization while avoiding autograd
-    computations all the way back to the start of start of training.
+    Use this method to detach the hidden state from the previous batch's history. This way we can 
+    carry hidden states values across training which improves convergence  while avoiding multiple
+    initializations and autograd computations all the way back to the start of start of training.
     """
 
     if isinstance(hidden_state, torch.Tensor):
-        return torch.Tensor(hidden_state.data)
+        return hidden_state.detach()
     elif isinstance(hidden_state, list):
         return [detach_hidden_state(h) for h in hidden_state]
     elif isinstance(hidden_state, tuple):

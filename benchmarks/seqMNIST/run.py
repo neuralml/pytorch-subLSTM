@@ -43,9 +43,9 @@ parser.add_argument('--optim', type=str, default='rmsprop',
     help='learning rule, supports adam|sparseadam|adamax|rmsprop|sgd|adagrad|adadelta')
 parser.add_argument('--epochs', type=int, default=40,
     help='max number of training epochs')
-parser.add_argument('--batch-size', type=int, default=200, metavar='N',
+parser.add_argument('--batch-size', type=int, default=50, metavar='N',
     help='batch size')
-parser.parse_args('--train-test-split', type=float, default=0.2,
+parser.add_argument('--train-test-split', type=float, default=0.2,
     help='proportion of trainig data used for validation')
 parser.add_argument('--seed', type=int, default=1111,
     help='random seed')
@@ -58,15 +58,15 @@ parser.add_argument('--save', type=str,  default='./benchmarks/seqMNIST/results'
 
 args = parser.parse_args()
 
-print('Training {} model with parameters:' \
-    '\n\tnumber of layers: {}'\
-    '\n\thidden units: {}'\
-    '\n\tmax epochs: {}'\
-    '\n\tbatch size: {}' \
-    '\n\toptimizer: {}, lr={}'.format(
-        args.model, args.nlayers, args.nhid, args.epochs,
-        args.batch_size, args.optim, args.lr
-))
+print('Training {} model with parameters:'
+        '\n\tnumber of layers: {}'
+        '\n\thidden units: {}'
+        '\n\tmax epochs: {}'
+        '\n\tbatch size: {}'
+        '\n\toptimizer: {}, lr={}'.format(
+            args.model, args.nlayers, args.nhid, args.epochs,
+            args.batch_size, args.optim, args.lr
+        ))
 
 torch.manual_seed(args.seed)
 if torch.cuda.is_available():
@@ -127,17 +127,17 @@ model = init_model(
 ###################################################################################################
 
 if args.optim == 'adam':
-  optimizer = optim.Adam(model.parameters(), lr=args.lr, eps=1e-9, betas=[0.9, 0.98]) # 0.0001
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, eps=1e-9, betas=[0.9, 0.98])
 if args.optim == 'sparseadam':
-  optimizer = optim.SparseAdam(model.parameters(), lr=args.lr, eps=1e-9, betas=[0.9, 0.98]) # 0.0001
+    optimizer = optim.SparseAdam(model.parameters(), lr=args.lr, eps=1e-9, betas=[0.9, 0.98])
 if args.optim == 'adamax':
-  optimizer = optim.Adamax(model.parameters(), lr=args.lr, eps=1e-9, betas=[0.9, 0.98]) # 0.0001
+    optimizer = optim.Adamax(model.parameters(), lr=args.lr, eps=1e-9, betas=[0.9, 0.98])
 elif args.optim == 'rmsprop':
-  optimizer = optim.RMSprop(model.parameters(), lr=args.lr, eps=1e-10, momentum=0.9) # 0.0001
+    optimizer = optim.RMSprop(model.parameters(), lr=args.lr, eps=1e-10, momentum=0.9)
 elif args.optim == 'sgd':
-  optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9) # 0.01
+    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9) # 0.01
 elif args.optim == 'adagrad':
-  optimizer = optim.Adagrad(model.parameters(), lr=args.lr)
+    optimizer = optim.Adagrad(model.parameters(), lr=args.lr)
 elif args.optim == 'adadelta':
     optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
 else:
@@ -178,13 +178,16 @@ try:
             \n\ttotal time {} \
             \n\ttraining_loss = {:5.4f} \
             \n\tvalidation_loss = {:5.4f}'.format(
-                e + 1, time.time() - start_time, np.sum(epoch_trace) / len(epoch_trace), val_loss))
+                e + 1,
+                time.time() - start_time,
+                np.sum(epoch_trace) / len(epoch_trace),
+                val_loss))
 
         if val_loss < best_loss:
             with open(save_path + '/model.txt', 'wb') as f:
                 torch.save(model, f)
             best_loss = val_loss
-    
+   
 except KeyboardInterrupt:
     print('Keyboard interruption. Exiting training.')
 
