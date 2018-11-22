@@ -90,7 +90,8 @@ def train(model, data_loader, criterion, optimizer, grad_clip, log_interval, dev
         optimizer.zero_grad()
 
         # Detach hidden state computation graph from previous batch.
-        # This is need to avoid backprogating to the start of training.
+        # Usin the previous value speeds up training but detaching is 
+        # needed to avoid backprogating to the start of training.
         hidden = detach_hidden_state(hidden)
 
         # Forward and backward steps

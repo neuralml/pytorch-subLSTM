@@ -1,19 +1,15 @@
 # coding: utf-8
 
-import argparse
-import time
-import math
-
 import sys
 import os
+import argparse
+import time
 
 import numpy as np
 import pandas as pd
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
 from torch.utils.data import DataLoader
 import torchvision.transforms as trans
 import torchvision.datasets as dataset
@@ -41,7 +37,7 @@ parser.add_argument('--clip', type=float, default=0.25,
     help='gradient clipping')
 parser.add_argument('--optim', type=str, default='rmsprop',
     help='learning rule, supports adam|sparseadam|adamax|rmsprop|sgd|adagrad|adadelta')
-parser.add_argument('--epochs', type=int, default=40,
+parser.add_argument('--epochs', type=int, default=1,
     help='max number of training epochs')
 parser.add_argument('--batch-size', type=int, default=50, metavar='N',
     help='batch size')
@@ -69,20 +65,18 @@ print('Training {} model with parameters:'
         ))
 
 torch.manual_seed(args.seed)
-if torch.cuda.is_available():
-    if not args.cuda:
-        device = torch.device('cpu')
-        print('\tusing CPU\n\tWARNING: CUDA device available but not being used. \
-            run with --cuda option to enable it.')
-    else:
-        torch.cuda.manual_seed(args.seed)
-        device = torch.device('cuda')
-        print('\tusing CUDA device')
-else:
-    print('\tusing CPU')
-    device = torch.device('cpu')
 
-print()
+if args.cuda and torch.cuda.is_available():
+    torch.cuda.manual_seed(args.seed)
+    device = torch.device('cuda')
+    print('\tusing CUDA')
+
+else:
+    device = torch.device('cpu')
+    print('\tusing CPU')
+    if torch.cuda.is_available():
+        print('\tWARNING: CUDA device available but not being used. \
+            run with --cuda option to enable it.\n\n')
 
 ###################################################################################################
 # LOAD DATA
@@ -184,8 +178,13 @@ try:
                 val_loss))
 
         if val_loss < best_loss:
-            with open(save_path + '/model.txt', 'wb') as f:
-                torch.save(model, f)
+            with open(save_path + '/model.pt', 'wb') as f:
+                torch.save({
+                    'epoch': e + 1,
+                    'model_state': model.state_dict(),
+                    'optimizer_state': optimizer.state_dict(),
+                    'loss': val_loss
+                }, f)
             best_loss = val_loss
    
 except KeyboardInterrupt:
@@ -198,8 +197,8 @@ pd.DataFrame.from_dict({args.model: loss_trace}).to_csv(path_or_buf=save_path + 
 # VALIDATE
 ###################################################################################################
 
-with open(save_path + '/model.txt', 'rb') as f:
-    model = torch.load(f)
+with open(save_path + '/model.pt', 'rb') as f:
+    model.load_state_dict(torch.load(f)['model_state'])
 
 test_loss = test(model, test_data, criterion, device)
 print('Training ended:\n\t test loss {:5.2f}'.format(test_loss))
