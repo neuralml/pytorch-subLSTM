@@ -59,19 +59,22 @@ class SubLSTMCell(RNNCellBase):
         self.check_forward_hidden(input, hx[1], '[1]')
 
         if self._fix_f_gate:
-            return fixSubLSTMCellF(input, hx, self.W_i, self.W_h, self.f_gate, self.b_i, self.b_h)
+            return fixSubLSTMCellF(
+                input, hx, self.W_i, self.W_h, self.f_gate, self.b_i, self.b_h)
         return SubLSTMCellF(input, hx, self.W_i, self.W_h, self.b_i, self.b_h)
 
 
 # noinspection PyShadowingBuiltins,PyPep8Naming
 class SubLSTM(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers=1, bias=True, fixed_forget=True, batch_first=False):
+    def __init__(self, input_size, hidden_size, num_layers=1, bias=True,
+                    fixed_forget=True, batch_first=False):
 
         super(SubLSTM, self).__init__()
 
         if isinstance(hidden_size, list) and len(hidden_size) != num_layers:
             raise ValueError(
-                'Length of hidden_size list is not the same as num_layers. Expected {0} got {1}'.format(
+                'Length of hidden_size list is not the same as num_layers.'
+                'Expected {0} got {1}'.format(
                     num_layers, len(hidden_size))
             )
 
@@ -124,7 +127,8 @@ class SubLSTM(nn.Module):
 
     @property
     def all_weights(self):
-        return [[getattr(self, name) for name in param_names] for param_names in self._all_params]
+        return [[getattr(self, name) for name in param_names] 
+            for param_names in self._all_params]
 
     def reset_parameters(self):
         for l, hidden_size in enumerate(self.hidden_size):
@@ -136,8 +140,7 @@ class SubLSTM(nn.Module):
         pass
 
     def forward(self, input, hx=None):
-
-        # TODO: Check docs later and add the packed sequence option and the bidirectional version
+        # TODO: Check docs later and add the packed sequence and seq2seq models
         # is_packed = isinstance(input, PackedSequence)
         #
         # if is_packed:
@@ -153,7 +156,8 @@ class SubLSTM(nn.Module):
             hx = []
             for l in range(self.num_layers):
                 # use input.new_zeros so dtype and device are the same as the input's
-                hidden = input.new_zeros((max_batch_size, self.hidden_size[l]), requires_grad=False)
+                hidden = input.new_zeros(
+                    (max_batch_size, self.hidden_size[l]), requires_grad=False)
                 hx.append((hidden, hidden))
 
         Ws = self.all_weights
@@ -172,7 +176,8 @@ class SubLSTM(nn.Module):
                         w_i, w_h, f = Ws[layer]
                         b_i, b_h = None, None
 
-                    out, c = fixSubLSTMCellF(outputs[time], hx[layer], w_i, w_h, f, b_i, b_h)
+                    out, c = fixSubLSTMCellF(
+                        outputs[time], hx[layer], w_i, w_h, f, b_i, b_h)
 
                 else:
                     if self.bias:
@@ -181,7 +186,8 @@ class SubLSTM(nn.Module):
                         w_i, w_h = Ws[layer]
                         b_i, b_h, f = None, None, None
 
-                    out, c = SubLSTMCellF(outputs[time], hx[layer], w_i, w_h, b_i, b_h)
+                    out, c = SubLSTMCellF(
+                        outputs[time], hx[layer], w_i, w_h, b_i, b_h)
 
                 hx[layer] = (out, c)
                 outputs[time] = out

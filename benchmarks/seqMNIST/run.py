@@ -22,27 +22,26 @@ from benchmarks.utils import train, test, init_model
 
 parser = argparse.ArgumentParser(description='PyTorch Sequential MNIST LSTM model test')
 
-parser.add_argument(
-    '--data', type=str, default='./benchmarks/seqMNIST/MNIST', help='location of the data set')
-parser.add_argument(
-    '--model', type=str, default='subLSTM', 
+parser.add_argument('--model', type=str, default='subLSTM', 
     help='RNN model tu use. One of subLSTM|fix-subLSTM|LSTM|GRU')
 parser.add_argument('--nlayers', type=int, default=1,
     help='number of layers')
 parser.add_argument('--nhid', type=int, default=50,
     help='number of hidden units per layer')
+parser.add_argument('--data', type=str, default='./benchmarks/seqMNIST/MNIST',
+    help='location of the data set')
+parser.add_argument('--train-test-split', type=float, default=0.2,
+    help='proportion of trainig data used for validation')
+parser.add_argument('--batch-size', type=int, default=50, metavar='N',
+    help='batch size')
+parser.add_argument('--epochs', type=int, default=1,
+    help='max number of training epochs')
+parser.add_argument('--optim', type=str, default='rmsprop',
+    help='learning rule, supports adam|sparseadam|adamax|rmsprop|sgd|adagrad|adadelta')
 parser.add_argument('--lr', type=float, default=1e-4,
     help='initial learning rate')
 parser.add_argument('--clip', type=float, default=0.25,
     help='gradient clipping')
-parser.add_argument('--optim', type=str, default='rmsprop',
-    help='learning rule, supports adam|sparseadam|adamax|rmsprop|sgd|adagrad|adadelta')
-parser.add_argument('--epochs', type=int, default=1,
-    help='max number of training epochs')
-parser.add_argument('--batch-size', type=int, default=50, metavar='N',
-    help='batch size')
-parser.add_argument('--train-test-split', type=float, default=0.2,
-    help='proportion of trainig data used for validation')
 parser.add_argument('--seed', type=int, default=1111,
     help='random seed')
 parser.add_argument('--cuda', action='store_true',
@@ -78,9 +77,9 @@ else:
         print('\tWARNING: CUDA device available but not being used. \
             run with --cuda option to enable it.\n\n')
 
-###################################################################################################
+########################################################################################
 # LOAD DATA
-###################################################################################################
+########################################################################################
 
 transform = trans.Compose([
     trans.ToTensor(),
@@ -90,22 +89,25 @@ transform = trans.Compose([
 # Load data
 data_path, batch_size = args.data, args.batch_size
 
-train_data = dataset.MNIST(root=data_path, train=True, transform=transform, download=True)
+train_data = dataset.MNIST(
+    root=data_path, train=True, transform=transform, download=True)
 
 # Split train data into training and validation sets
 N = len(train_data)
 val_size = int(N * 0.2)
-train_data, validation_data = torch.utils.data.random_split(train_data, [N - val_size, val_size])
+train_data, validation_data = torch.utils.data.random_split(
+    train_data, [N - val_size, val_size])
 
 train_data = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 validation_data = DataLoader(validation_data, batch_size=batch_size, shuffle=True)
 
-test_data = dataset.MNIST(root=data_path, train=False, transform=transform, download=True)
+test_data = dataset.MNIST(
+    root=data_path, train=False, transform=transform, download=True)
 test_data = DataLoader(test_data, batch_size=batch_size, shuffle=True)
 
-###################################################################################################
+########################################################################################
 # CREATE THE MODEL
-###################################################################################################
+########################################################################################
 
 input_size, hidden_size, n_classes = 1, args.nhid, 10
 
@@ -116,32 +118,39 @@ model = init_model(
     device=device,
 )
 
-###################################################################################################
-# SET UP TRAINING PARAMETERS
-###################################################################################################
+########################################################################################
+# SET UP OPTIMIZER & OBJECTIVE FUNCTION
+########################################################################################
 
 if args.optim == 'adam':
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, eps=1e-9, betas=[0.9, 0.98])
+    optimizer = optim.Adam(model.parameters(),
+    lr=args.lr, eps=1e-9, betas=[0.9, 0.98])
 if args.optim == 'sparseadam':
-    optimizer = optim.SparseAdam(model.parameters(), lr=args.lr, eps=1e-9, betas=[0.9, 0.98])
+    optimizer = optim.SparseAdam(model.parameters(),
+    lr=args.lr, eps=1e-9, betas=[0.9, 0.98])
 if args.optim == 'adamax':
-    optimizer = optim.Adamax(model.parameters(), lr=args.lr, eps=1e-9, betas=[0.9, 0.98])
+    optimizer = optim.Adamax(model.parameters(),
+    lr=args.lr, eps=1e-9, betas=[0.9, 0.98])
 elif args.optim == 'rmsprop':
-    optimizer = optim.RMSprop(model.parameters(), lr=args.lr, eps=1e-10, momentum=0.9)
+    optimizer = optim.RMSprop(model.parameters(),
+    lr=args.lr, eps=1e-10, momentum=0.9)
 elif args.optim == 'sgd':
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9) # 0.01
+    optimizer = optim.SGD(model.parameters(),
+    lr=args.lr, momentum=0.9) # 0.01
 elif args.optim == 'adagrad':
-    optimizer = optim.Adagrad(model.parameters(), lr=args.lr)
+    optimizer = optim.Adagrad(model.parameters(),
+    lr=args.lr, lr_decay=0.9)
 elif args.optim == 'adadelta':
-    optimizer = optim.Adadelta(model.parameters(), lr=args.lr)
+    optimizer = optim.Adadelta(model.parameters(),
+    lr=args.lr, rho=0.9)
 else:
     raise ValueError(r'Optimizer {0} not recognized'.format(args.optim))
 
 criterion = nn.CrossEntropyLoss()
 
-###################################################################################################
+########################################################################################
 # TRAIN MODEL
-###################################################################################################
+########################################################################################
 
 epochs, log_interval = args.epochs, args.log_interval
 loss_trace, best_loss = [], np.inf
@@ -188,14 +197,15 @@ try:
             best_loss = val_loss
    
 except KeyboardInterrupt:
-    print('Keyboard interruption. Exiting training.')
+    print('Keyboard interruption. Terminating training.')
 
 # Save the trace of the loss during training
-pd.DataFrame.from_dict({args.model: loss_trace}).to_csv(path_or_buf=save_path + '/trace.csv')
+pd.DataFrame.from_dict({args.model: loss_trace}).to_csv(
+    path_or_buf=save_path + '/trace.csv')
 
-###################################################################################################
+########################################################################################
 # VALIDATE
-###################################################################################################
+########################################################################################
 
 with open(save_path + '/model.pt', 'rb') as f:
     model.load_state_dict(torch.load(f)['model_state'])
