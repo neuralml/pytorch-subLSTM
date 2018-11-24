@@ -40,6 +40,8 @@ parser.add_argument('--optim', type=str, default='rmsprop',
     help='learning rule, supports adam|sparseadam|adamax|rmsprop|sgd|adagrad|adadelta')
 parser.add_argument('--lr', type=float, default=1e-4,
     help='initial learning rate')
+parser.add_argument('--l2-norm', type=float, default=0,
+    help='weight of L2 norm')
 parser.add_argument('--clip', type=float, default=0.25,
     help='gradient clipping')
 parser.add_argument('--seed', type=int, default=1111,
@@ -58,9 +60,9 @@ print('Training {} model with parameters:'
         '\n\thidden units: {}'
         '\n\tmax epochs: {}'
         '\n\tbatch size: {}'
-        '\n\toptimizer: {}, lr={}'.format(
+        '\n\toptimizer: {}, lr={}, l2={}'.format(
             args.model, args.nlayers, args.nhid, args.epochs,
-            args.batch_size, args.optim, args.lr
+            args.batch_size, args.optim, args.lr, args.l2_norm
         ))
 
 torch.manual_seed(args.seed)
@@ -76,6 +78,10 @@ else:
     if torch.cuda.is_available():
         print('\tWARNING: CUDA device available but not being used. \
             run with --cuda option to enable it.\n\n')
+
+if args.model in ['subLSTM', 'fix-subLSTM'] and args.l2_norm == 0:
+    print('\tWARNING: subLSTMs are prone to exploding gradients. Consider using '
+        'L2 regularization by setting parameter --l2-norm to a value greater than 0')
 
 ########################################################################################
 # LOAD DATA
@@ -124,25 +130,25 @@ model = init_model(
 
 if args.optim == 'adam':
     optimizer = optim.Adam(model.parameters(),
-    lr=args.lr, eps=1e-9, betas=[0.9, 0.98])
+    lr=args.lr, eps=1e-9, weight_decay=args.l2_norm, betas=[0.9, 0.98])
 if args.optim == 'sparseadam':
     optimizer = optim.SparseAdam(model.parameters(),
-    lr=args.lr, eps=1e-9, betas=[0.9, 0.98])
+    lr=args.lr, eps=1e-9, weight_decay=args.l2_norm, betas=[0.9, 0.98])
 if args.optim == 'adamax':
     optimizer = optim.Adamax(model.parameters(),
-    lr=args.lr, eps=1e-9, betas=[0.9, 0.98])
+    lr=args.lr, eps=1e-9, weight_decay=args.l2_norm, betas=[0.9, 0.98])
 elif args.optim == 'rmsprop':
     optimizer = optim.RMSprop(model.parameters(),
-    lr=args.lr, eps=1e-10, momentum=0.9)
+    lr=args.lr, eps=1e-10, weight_decay=args.l2_norm, momentum=0.9)
 elif args.optim == 'sgd':
     optimizer = optim.SGD(model.parameters(),
-    lr=args.lr, momentum=0.9) # 0.01
+    lr=args.lr, weight_decay=args.l2_norm, momentum=0.9) # 0.01
 elif args.optim == 'adagrad':
     optimizer = optim.Adagrad(model.parameters(),
-    lr=args.lr, lr_decay=0.9)
+    lr=args.lr, weight_decay=args.l2_norm, lr_decay=0.9)
 elif args.optim == 'adadelta':
     optimizer = optim.Adadelta(model.parameters(),
-    lr=args.lr, rho=0.9)
+    lr=args.lr, weight_decay=args.l2_norm, rho=0.9)
 else:
     raise ValueError(r'Optimizer {0} not recognized'.format(args.optim))
 
