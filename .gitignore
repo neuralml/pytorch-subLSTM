@@ -9,5 +9,5 @@
 /src/torch_sublstm.egg-info/*
 /build/*
 /dist/*
-src/subLSTM/__pycache__/__init__.cpython-37.pyc
-src/subLSTM/__pycache__/functional.cpython-37.pyc
+src/subLSTM/__pycache__/*
+src/subLSTM/__pycache__/*

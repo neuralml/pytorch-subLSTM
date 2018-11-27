@@ -12,7 +12,7 @@ def detach_hidden_state(hidden_state):
     """
 
     if isinstance(hidden_state, torch.Tensor):
-        return hidden_state.detach()
+        return torch.tensor(hidden_state.data)
     elif isinstance(hidden_state, list):
         return [detach_hidden_state(h) for h in hidden_state]
     elif isinstance(hidden_state, tuple):

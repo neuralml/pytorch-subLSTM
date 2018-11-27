@@ -1,9 +1,7 @@
 import sys
 import torch
 
-sys.path.insert(0, '.')
-
-from src.subLSTM import SubLSTM
+from subLSTM.nn import SubLSTM
 
 timestep, batch_size, in_size = 40, 20, 50
 input = torch.randn(timestep, batch_size, in_size, requires_grad=False)
