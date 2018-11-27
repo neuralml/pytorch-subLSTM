@@ -6,7 +6,7 @@ from torch.nn.modules.rnn import RNNCellBase
 # from torch.nn.modules.rnn import PackedSequence
 # from torch.nn.utils.rnn import pack_padded_sequence as pack, pad_packed_sequence as pad
 
-from src.functional import fixSubLSTMCellF, SubLSTMCellF
+from .functional import fixSubLSTMCellF, SubLSTMCellF
 
 
 # noinspection PyPep8Naming,PyShadowingBuiltins

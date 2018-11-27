@@ -4,9 +4,9 @@ import sys
 import os
 import argparse
 import time
+import csv
 
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -14,11 +14,12 @@ from torch.utils.data import DataLoader
 import torchvision.transforms as trans
 import torchvision.datasets as dataset
 
-sys.path.insert(0, '.')
+# To use wrapper.py and utils.py
+sys.path.insert(0, '../')
 
-from src.subLSTM import SubLSTM
-from src.wrappers import RNNClassifier
-from benchmarks.utils import train, test, init_model
+from subLSTM.nn import SubLSTM
+from wrappers import init_model
+from utils import train, test
 
 parser = argparse.ArgumentParser(description='PyTorch Sequential MNIST LSTM model test')
 
@@ -28,13 +29,13 @@ parser.add_argument('--nlayers', type=int, default=1,
     help='number of layers')
 parser.add_argument('--nhid', type=int, default=50,
     help='number of hidden units per layer')
-parser.add_argument('--data', type=str, default='./benchmarks/seqMNIST/MNIST',
+parser.add_argument('--data', type=str, default='MNIST',
     help='location of the data set')
 parser.add_argument('--train-test-split', type=float, default=0.2,
     help='proportion of trainig data used for validation')
 parser.add_argument('--batch-size', type=int, default=50, metavar='N',
     help='batch size')
-parser.add_argument('--epochs', type=int, default=1,
+parser.add_argument('--epochs', type=int, default=40,
     help='max number of training epochs')
 parser.add_argument('--optim', type=str, default='rmsprop',
     help='learning rule, supports adam|sparseadam|adamax|rmsprop|sgd|adagrad|adadelta')
@@ -42,15 +43,15 @@ parser.add_argument('--lr', type=float, default=1e-4,
     help='initial learning rate')
 parser.add_argument('--l2-norm', type=float, default=0,
     help='weight of L2 norm')
-parser.add_argument('--clip', type=float, default=0.25,
+parser.add_argument('--clip', type=float, default=1,
     help='gradient clipping')
-parser.add_argument('--seed', type=int, default=1111,
+parser.add_argument('--seed', type=int, default=18092,
     help='random seed')
 parser.add_argument('--cuda', action='store_true',
     help='use CUDA')
-parser.add_argument('--log-interval', type=int, default=200, metavar='N',
+parser.add_argument('--log-interval', type=int, default=20, metavar='N',
     help='report interval')
-parser.add_argument('--save', type=str,  default='./benchmarks/seqMNIST/results',
+parser.add_argument('--save', type=str,  default='results',
     help='path to save the final model')
 
 args = parser.parse_args()
@@ -206,8 +207,9 @@ except KeyboardInterrupt:
     print('Keyboard interruption. Terminating training.')
 
 # Save the trace of the loss during training
-pd.DataFrame.from_dict({args.model: loss_trace}).to_csv(
-    path_or_buf=save_path + '/trace.csv')
+with open(save_path + '/trace.csv', 'w') as f:
+    wr = csv.writer(f, quoting=csv.QUOTE_ALL)
+    wr.writerow(loss_trace)
 
 ########################################################################################
 # VALIDATE
@@ -217,4 +219,4 @@ with open(save_path + '/model.pt', 'rb') as f:
     model.load_state_dict(torch.load(f)['model_state'])
 
 test_loss = test(model, test_data, criterion, device)
-print('Training ended:\n\t test loss {:5.2f}'.format(test_loss))
+print('Training ended:\n\t test loss {:5.4f}'.format(test_loss))
