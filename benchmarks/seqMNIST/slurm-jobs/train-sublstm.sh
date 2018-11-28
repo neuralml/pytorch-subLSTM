@@ -1,7 +1,7 @@
 #!/bin/bash -login
 
 #SBATCH --job-name=gpu-test
-#SBATCH --partition gpu_veryshort
+#SBATCH --partition gpu
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
