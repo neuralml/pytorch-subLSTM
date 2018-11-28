@@ -20,7 +20,7 @@ echo 'Testing GPU using subLSTM'
 
 srun python run.py  \
     --model fix-subLSTM --nlayers 1 --nhid 50 \
-    --optim rmsprop --lr 1e-4 --l2-norm 0.1  \
+    --optim rmsprop --lr 1e-3 --l2-norm 0.1  \
     --epochs 100 --batch-size 50 \
     --seed 18092 --cuda --log-interval 50 \
     --save ./results
