@@ -6,7 +6,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --gres=gpu:2
-#SBATCH --time=1:0:0
+#SBATCH --time=5:0:0
 #SBATCH --mem=16000M
 
 module add languages/anaconda3/5.2.0-tflow-1.11
