@@ -84,10 +84,6 @@ else:
         print('\tWARNING: CUDA device available but not being used. \
             run with --cuda option to enable it.\n\n')
 
-if args.model in ['subLSTM', 'fix-subLSTM'] and args.l2_norm == 0:
-    print('\tWARNING: subLSTMs are prone to exploding gradients. Consider using '
-        'L2 regularization by setting parameter --l2-norm to a value greater than 0')
-
 ########################################################################################
 # LOAD DATA
 ########################################################################################
