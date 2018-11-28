@@ -14,29 +14,30 @@ module add libs/cuda/9.0-gcc-5.4.0-2.26
 module add libs/cudnn/9.0-cuda-9.0
 
 # Put the module on PYTHON_PATH since I cannot install it on the BC4 cluster
+cd ..
 export PYTHONPATH=$PYTHONPATH:../../src/
 
 echo 'Comparing LSTM variants on sequential MNIST'
 
-srun -N 1 python benchmarks/seqMNIST/run.py  \
+srun -N 1 python run.py  \
     --model subLSTM --nlayers 1 --nhid 50 \
     --optim rmsprop --lr 10e-4 --epochs 40 --batch-size 50 \
     --seed 18092 --cuda --log-interval 50 \
     --save ./benchmarks/seqMNIST/results &
 
-srun -N 1 python benchmarks/seqMNIST/run.py  \
+srun -N 1 python run.py  \
     --model fix-subLSTM --nlayers 1 --nhid 50 \
     --optim rmsprop --lr 10e-4 --epochs 40 --batch-size 50 \
     --seed 18092 --cuda --log-interval 50 \
     --save ./benchmarks/seqMNIST/results &
 
-srun -N 1 python benchmarks/seqMNIST/run.py  \
+srun -N 1 python run.py  \
     --model LSTM --nlayers 1 --nhid 50 \
     --optim rmsprop --lr 10e-4 --epochs 40 --batch-size 50 \
     --seed 18092 --cuda --log-interval 50 \
     --save ./benchmarks/seqMNIST/results &
 
-srun -N 1 python benchmarks/seqMNIST/run.py  \
+srun -N 1 python run.py  \
     --model GRU --nlayers 1 --nhid 50 \
     --optim rmsprop --lr 10e-4 --epochs 40 --batch-size 50 \
     --seed 18092 --cuda --log-interval 50 \
