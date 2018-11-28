@@ -14,6 +14,10 @@ from torch.utils.data import DataLoader
 import torchvision.transforms as trans
 import torchvision.datasets as dataset
 
+# use the source for debugging instead of the installed module
+if __debug__:
+    sys.path.insert(0, '../../src/')
+
 # To use wrapper.py and utils.py
 sys.path.insert(0, '../')
 

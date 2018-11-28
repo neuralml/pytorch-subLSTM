@@ -137,7 +137,7 @@ class SubLSTM(nn.Module):
                 if name.startswith(('W', 'R')):
                     nn.init.xavier_normal_(param)
                 else:
-                    nn.init.zeros_(param)
+                    nn.init.normal_(param)
 
     def flatten_parameters(self):
         pass
