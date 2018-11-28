@@ -132,12 +132,9 @@ class SubLSTM(nn.Module):
 
     def reset_parameters(self):
         for l in range(self.num_layers):
-            for name in self._all_params[l]:
-                param = getattr(self, name)
-                if name.startswith(('W', 'R')):
-                    nn.init.xavier_normal_(param)
-                else:
-                    nn.init.normal_(param)
+            stdv = 1.0 / math.sqrt(self.hidden_size[l])
+            for weight in self.all_weights[l]:
+                weight.data.uniform_(-stdv, stdv)
 
     def flatten_parameters(self):
         pass
