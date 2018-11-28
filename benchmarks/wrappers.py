@@ -18,6 +18,10 @@ class RNNClassifier(nn.Module):
 
         # Use this for later
         self._mode = True
+    
+    def reset_parameters(self):
+        self.rnn.reset_parameters()
+        self.linear.reset_parameters()
 
     def forward(self, input, hidden=None):
         output, hidden = self.rnn(input, hidden)
