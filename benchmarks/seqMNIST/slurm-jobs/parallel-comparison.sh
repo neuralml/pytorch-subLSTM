@@ -23,23 +23,23 @@ srun -N 1 python run.py  \
     --model subLSTM --nlayers 1 --nhid 50 \
     --optim rmsprop --lr 10e-4 --epochs 40 --batch-size 50 \
     --seed 18092 --cuda --log-interval 50 \
-    --save ./benchmarks/seqMNIST/results &
+    --save ./results &
 
 srun -N 1 python run.py  \
     --model fix-subLSTM --nlayers 1 --nhid 50 \
     --optim rmsprop --lr 10e-4 --epochs 40 --batch-size 50 \
     --seed 18092 --cuda --log-interval 50 \
-    --save ./benchmarks/seqMNIST/results &
+    --save ./results &
 
 srun -N 1 python run.py  \
     --model LSTM --nlayers 1 --nhid 50 \
     --optim rmsprop --lr 10e-4 --epochs 40 --batch-size 50 \
     --seed 18092 --cuda --log-interval 50 \
-    --save ./benchmarks/seqMNIST/results &
+    --save ./results &
 
 srun -N 1 python run.py  \
     --model GRU --nlayers 1 --nhid 50 \
     --optim rmsprop --lr 10e-4 --epochs 40 --batch-size 50 \
     --seed 18092 --cuda --log-interval 50 \
-    --save ./benchmarks/seqMNIST/results &
+    --save ./results &
 wait

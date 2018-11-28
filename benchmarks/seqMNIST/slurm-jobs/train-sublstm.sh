@@ -23,4 +23,4 @@ srun python run.py  \
     --optim rmsprop --lr 1e-4 --l2-norm 0.1  \
     --epochs 100 --batch-size 50 \
     --seed 18092 --cuda --log-interval 50 \
-    --save ./benchmarks/seqMNIST/results
+    --save ./results
