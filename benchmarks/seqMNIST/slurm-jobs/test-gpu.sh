@@ -17,6 +17,6 @@ echo 'Testing GPU using subLSTM'
 
 srun python benchmarks/seqMNIST/run.py  \
     --model subLSTM --nlayers 1 --nhid 50 \
-    --lr 10e-4 --optim rmsprop --epochs 40 --batch-size 50 \
+    --optim rmsprop --lr 10e-4 --epochs 40 --batch-size 50 \
     --seed 18092 --cuda --log-interval 50 \
     --save ./benchmarks/seqMNIST/results

@@ -1,9 +1,7 @@
 import sys
 import torch
 
-sys.path.insert(0, '.')
-
-from src.subLSTM import SubLSTMCell
+from subLSTM.functional import SubLSTMCellF, fixSubLSTMCellF
 
 
 in_size, hidden_size, batch_size = 30, 100, 2
@@ -18,7 +16,7 @@ hx.sum().backward()
 assert hx.size() == (batch_size, hidden_size)
 assert cx.size() == (batch_size, hidden_size)
 
-fix_cell = SubLSTMCell(in_size, hidden_size, fix_subLSTM=True)
+fix_cell = fixSubLSTMCellF(in_size, hidden_size)
 
 hx, cx = fix_cell(input)
 

@@ -4,3 +4,10 @@
 /*/__pycache__/
 /benchmarks/seqMNIST/results/*
 /benchmarks/seqMNIST/MNIST
+/benchmarks/seqMNIST/bash-scripts/*
+/torch_sublstm.egg-info/*
+/src/torch_sublstm.egg-info/*
+/build/*
+/dist/*
+src/subLSTM/__pycache__/*
+src/subLSTM/__pycache__/*

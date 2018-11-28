@@ -6,7 +6,7 @@ from torch.nn.modules.rnn import RNNCellBase
 # from torch.nn.modules.rnn import PackedSequence
 # from torch.nn.utils.rnn import pack_padded_sequence as pack, pad_packed_sequence as pad
 
-from src.functional import fixSubLSTMCellF, SubLSTMCellF
+from .functional import fixSubLSTMCellF, SubLSTMCellF
 
 
 # noinspection PyPep8Naming,PyShadowingBuiltins
@@ -131,10 +131,13 @@ class SubLSTM(nn.Module):
             for param_names in self._all_params]
 
     def reset_parameters(self):
-        for l, hidden_size in enumerate(self.hidden_size):
-            std = 1.0 / math.sqrt(hidden_size)
+        for l in range(self.num_layers):
             for name in self._all_params[l]:
-                getattr(self, name).data.uniform_(-std, std)
+                param = getattr(self, name)
+                if name.startswith(('W', 'R')):
+                    nn.init.xavier_normal_(param)
+                else:
+                    nn.init.zeros_(param)
 
     def flatten_parameters(self):
         pass
@@ -167,27 +170,21 @@ class SubLSTM(nn.Module):
         timesteps = input.size(0)
         outputs = [input[i] for i in range(timesteps)]
 
+        if self.fixed_forget:
+            def _forward(time, layer):
+                w_i, w_h, b_i, b_h, f = Ws[layer]
+                return fixSubLSTMCellF(
+                    outputs[time], hx[layer], w_i, w_h, f, b_i, b_h)
+        else:
+            def _forward(time, layer):
+                w_i, w_h, b_i, b_h = Ws[layer]
+                return SubLSTMCellF(
+                    outputs[time], hx[layer], w_i, w_h, b_i, b_h)
+
+
         for time in range(timesteps):
             for layer in range(self.num_layers):
-                if self.fixed_forget:
-                    if self.bias:
-                        w_i, w_h, b_i, b_h, f = Ws[layer]
-                    else:
-                        w_i, w_h, f = Ws[layer]
-                        b_i, b_h = None, None
-
-                    out, c = fixSubLSTMCellF(
-                        outputs[time], hx[layer], w_i, w_h, f, b_i, b_h)
-
-                else:
-                    if self.bias:
-                        w_i, w_h, b_i, b_h = Ws[layer]
-                    else:
-                        w_i, w_h = Ws[layer]
-                        b_i, b_h, f = None, None, None
-
-                    out, c = SubLSTMCellF(
-                        outputs[time], hx[layer], w_i, w_h, b_i, b_h)
+                out, c = _forward(time, layer)
 
                 hx[layer] = (out, c)
                 outputs[time] = out
