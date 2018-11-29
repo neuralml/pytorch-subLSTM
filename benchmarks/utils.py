@@ -80,3 +80,21 @@ def test(model, data_loader, criterion, device):
             total_loss += criterion(model(inputs)[0], labels)
 
     return total_loss / (i + 1)
+
+
+def compute_accuracy(model, data_loader, device):
+    model.eval()
+    correct, total = 0, 0
+
+    with torch.no_grad():
+        for i, data in enumerate(data_loader):
+            inputs, labels = data
+            inputs = inputs.to(device)
+
+            outputs = model(inputs)[0]
+            predictions = torch.argmax(outputs, dim=1)
+
+            total += predictions.size(0)
+            correct += (labels == predictions).sum().item()
+
+    return correct / total

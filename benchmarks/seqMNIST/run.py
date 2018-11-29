@@ -23,7 +23,7 @@ sys.path.insert(0, '../')
 
 from subLSTM.nn import SubLSTM
 from wrappers import init_model
-from utils import train, test
+from utils import train, test, compute_accuracy
 
 parser = argparse.ArgumentParser(description='PyTorch Sequential MNIST LSTM model test')
 
@@ -252,5 +252,7 @@ with open(save_path + '/model.pt', 'rb') as f:
     model.load_state_dict(torch.load(f)['model_state'])
 
 test_loss = test(model, test_data, criterion, device)
+accuracy = compute_accuracy(model, test_data, device)
 if args.verbose:
-    print('Training ended:\n\ttest loss {:5.4f}'.format(test_loss))
+    print('Training ended:\n\ttest loss {:5.4f}\n\taccuracy {:3.2%}'.format(
+        test_loss, accuracy))
