@@ -1,6 +1,6 @@
 #!/bin/bash -login
 
-#SBATCH --job-name=gpu-test
+#SBATCH --job-name=train-fixsublstm
 #SBATCH --partition gpu
 #SBATCH --ntasks=1
 #SBATCH --nodes=1
