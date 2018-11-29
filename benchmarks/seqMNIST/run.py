@@ -27,18 +27,29 @@ from utils import train, test
 
 parser = argparse.ArgumentParser(description='PyTorch Sequential MNIST LSTM model test')
 
+########################################################################################
+# Model parameters
 parser.add_argument('--model', type=str, default='subLSTM', 
     help='RNN model tu use. One of subLSTM|fix-subLSTM|LSTM|GRU')
 parser.add_argument('--nlayers', type=int, default=1,
     help='number of layers')
 parser.add_argument('--nhid', type=int, default=50,
     help='number of hidden units per layer')
+
+# Data parameters
 parser.add_argument('--data', type=str, default='MNIST',
     help='location of the data set')
 parser.add_argument('--train-test-split', type=float, default=0.2,
     help='proportion of trainig data used for validation')
 parser.add_argument('--batch-size', type=int, default=50, metavar='N',
     help='batch size')
+parser.add_argument('--shuffle', action='store_true',
+    help='shuffle the data at the start of each epoch.')
+parser.add_argument('--input-size', type=int, default=1,
+    help='the default dimensionality of each input timestep.'
+    'defaults to 1, meaning instances are treated like one large 1D sequence')
+
+# Training parameters
 parser.add_argument('--epochs', type=int, default=40,
     help='max number of training epochs')
 parser.add_argument('--optim', type=str, default='rmsprop',
@@ -49,14 +60,21 @@ parser.add_argument('--l2-norm', type=float, default=0,
     help='weight of L2 norm')
 parser.add_argument('--clip', type=float, default=1,
     help='gradient clipping')
-parser.add_argument('--seed', type=int, default=18092,
-    help='random seed')
-parser.add_argument('--cuda', action='store_true',
-    help='use CUDA')
+parser.add_argument('--track-hidden', action='store_true',
+    help='keep the hidden state values across a whole epoch of training')
 parser.add_argument('--log-interval', type=int, default=20, metavar='N',
     help='report interval')
+
+# Replicability and storage
 parser.add_argument('--save', type=str,  default='results',
     help='path to save the final model')
+parser.add_argument('--seed', type=int, default=18092,
+    help='random seed')
+
+# CUDA
+parser.add_argument('--cuda', action='store_true',
+    help='use CUDA')
+########################################################################################
 
 args = parser.parse_args()
 
@@ -90,7 +108,7 @@ else:
 
 transform = trans.Compose([
     trans.ToTensor(),
-    trans.Lambda(lambda x: x.view(-1, 1))
+    trans.Lambda(lambda x: x.view(-1, args.input_size))
 ])
 
 # Load data
@@ -105,23 +123,23 @@ val_size = int(N * 0.2)
 train_data, validation_data = torch.utils.data.random_split(
     train_data, [N - val_size, val_size])
 
-train_data = DataLoader(train_data, batch_size=batch_size, shuffle=True)
-validation_data = DataLoader(validation_data, batch_size=batch_size, shuffle=True)
+train_data = DataLoader(train_data, batch_size=batch_size, shuffle=args.shuffle)
+validation_data = DataLoader(validation_data, batch_size=batch_size, shuffle=False)
 
 test_data = dataset.MNIST(
     root=data_path, train=False, transform=transform, download=True)
-test_data = DataLoader(test_data, batch_size=batch_size, shuffle=True)
+test_data = DataLoader(test_data, batch_size=batch_size, shuffle=False)
 
 ########################################################################################
 # CREATE THE MODEL
 ########################################################################################
 
-input_size, hidden_size, n_classes = 1, args.nhid, 10
+input_size, hidden_size, n_classes = args.input_size, args.nhid, 10
 
 model = init_model(
     model_type=args.model,
     n_layers=args.nlayers, hidden_size=args.nhid,
-    input_size=1, output_size=10, class_task=True,
+    input_size=input_size, output_size=10, class_task=True,
     device=device,
 )
 
@@ -176,7 +194,8 @@ try:
             model=model, data_loader=train_data, 
             criterion=criterion, optimizer=optimizer, grad_clip=args.clip,
             log_interval=log_interval,
-            device=device
+            device=device,
+            track_hidden=args.track_hidden
         )
 
         loss_trace.extend(epoch_trace)

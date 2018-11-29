@@ -20,7 +20,7 @@ def detach_hidden_state(hidden_state):
     return None
 
 
-def train(model, data_loader, criterion, optimizer, grad_clip, log_interval, device):
+def train(model, data_loader, criterion, optimizer, grad_clip, track_hidden, log_interval, device):
     """
     Train the model for one epoch over the whole dataset.
     """
@@ -29,7 +29,7 @@ def train(model, data_loader, criterion, optimizer, grad_clip, log_interval, dev
     dataset_size, batch_size = len(data_loader.dataset), data_loader.batch_size
 
     # Keep track or the hidden state over the whole epoch. This allows faster training?
-    # hidden = None
+    hidden = None
 
     for i, data in enumerate(data_loader):
         # Load one batch into the device being used.
@@ -39,14 +39,15 @@ def train(model, data_loader, criterion, optimizer, grad_clip, log_interval, dev
         # Set all gradients to zero.
         optimizer.zero_grad()
 
-        # Detach hidden state computation graph from previous batch.
-        # Usin the previous value speeds up training but detaching is 
-        # needed to avoid backprogating to the start of training.
-        # hidden = detach_hidden_state(hidden)
+        # If reusing hidden states, detach them from the computation graph 
+        # of the previous batch. Usin the previous value may speed up training 
+        # but detaching is needed to avoid backprogating to the start of training.
+        hidden = detach_hidden_state(hidden) if track_hidden else None
 
         # Forward and backward steps
         # outputs, hidden = model(inputs, hidden)
-        outputs = model(inputs)[0]
+        outputs, hidden = model(inputs, hidden)
+
         loss = criterion(outputs, labels)
         loss.backward()
 
