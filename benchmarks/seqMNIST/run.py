@@ -74,33 +74,24 @@ parser.add_argument('--seed', type=int, default=18092,
 # CUDA
 parser.add_argument('--cuda', action='store_true',
     help='use CUDA')
+
+# Print options
+parser.add_argument('--verbose', action='store_true',
+    help='print the progress of training to std output.')
+
+########################################################################################
+# Setting up
 ########################################################################################
 
 args = parser.parse_args()
 
-print('Training {} model with parameters:'
-        '\n\tnumber of layers: {}'
-        '\n\thidden units: {}'
-        '\n\tmax epochs: {}'
-        '\n\tbatch size: {}'
-        '\n\toptimizer: {}, lr={}, l2={}'.format(
-            args.model, args.nlayers, args.nhid, args.epochs,
-            args.batch_size, args.optim, args.lr, args.l2_norm
-        ))
-
 torch.manual_seed(args.seed)
-
 if args.cuda and torch.cuda.is_available():
     torch.cuda.manual_seed(args.seed)
     device = torch.device('cuda')
-    print('\tusing CUDA')
-
 else:
     device = torch.device('cpu')
-    print('\tusing CPU')
-    if torch.cuda.is_available():
-        print('\tWARNING: CUDA device available but not being used. \
-            run with --cuda option to enable it.\n\n')
+
 
 ########################################################################################
 # LOAD DATA
@@ -150,10 +141,10 @@ model = init_model(
 if args.optim == 'adam':
     optimizer = optim.Adam(model.parameters(),
     lr=args.lr, eps=1e-9, weight_decay=args.l2_norm, betas=[0.9, 0.98])
-if args.optim == 'sparseadam':
+elif args.optim == 'sparseadam':
     optimizer = optim.SparseAdam(model.parameters(),
     lr=args.lr, eps=1e-9, weight_decay=args.l2_norm, betas=[0.9, 0.98])
-if args.optim == 'adamax':
+elif args.optim == 'adamax':
     optimizer = optim.Adamax(model.parameters(),
     lr=args.lr, eps=1e-9, weight_decay=args.l2_norm, betas=[0.9, 0.98])
 elif args.optim == 'rmsprop':
@@ -184,9 +175,30 @@ save_path = args.save + '/{0}_{1}_{2}'.format(args.model, args.nlayers, args.nhi
 if not os.path.exists(save_path):
     os.makedirs(save_path)
 
+if args.verbose:
+    print('Training {} model with parameters:'
+            '\n\tnumber of layers: {}'
+            '\n\thidden units: {}'
+            '\n\tmax epochs: {}'
+            '\n\tbatch size: {}'
+            '\n\toptimizer: {}, lr={}, l2={}'.format(
+                args.model, args.nlayers, hidden_size, epochs,
+                batch_size, args.optim, args.lr, args.l2_norm
+            ))
+
+    if args.cuda and torch.cuda.is_available():
+        print('\tusing CUDA')
+    else:
+        print('\tusing CPU')
+        if torch.cuda.is_available():
+            print('\tWARNING: CUDA device available but not being used. \
+                run with --cuda option to enable it.\n\n')
+
 try:
     for e in range(epochs):
-        print('training epoch {0}'.format(e + 1))
+        if args.verbose:
+            print('training epoch {0}'.format(e + 1))
+
         start_time = time.time()
 
         # Train model for 1 epoch over whole dataset
@@ -195,7 +207,8 @@ try:
             criterion=criterion, optimizer=optimizer, grad_clip=args.clip,
             log_interval=log_interval,
             device=device,
-            track_hidden=args.track_hidden
+            track_hidden=args.track_hidden,
+            verbose=args.verbose
         )
 
         loss_trace.extend(epoch_trace)
@@ -203,14 +216,15 @@ try:
         # Check validation loss
         val_loss = test(model, validation_data, criterion, device)
 
-        print('epoch {} finished \
-            \n\ttotal time {} \
-            \n\ttraining_loss = {:5.4f} \
-            \n\tvalidation_loss = {:5.4f}'.format(
-                e + 1,
-                time.time() - start_time,
-                np.sum(epoch_trace) / len(epoch_trace),
-                val_loss))
+        if args.verbose:
+            print('epoch {} finished \
+                \n\ttotal time {} \
+                \n\ttraining_loss = {:5.4f} \
+                \n\tvalidation_loss = {:5.4f}'.format(
+                    e + 1,
+                    time.time() - start_time,
+                    np.sum(epoch_trace) / len(epoch_trace),
+                    val_loss))
 
         if val_loss < best_loss:
             with open(save_path + '/model.pt', 'wb') as f:
@@ -238,4 +252,5 @@ with open(save_path + '/model.pt', 'rb') as f:
     model.load_state_dict(torch.load(f)['model_state'])
 
 test_loss = test(model, test_data, criterion, device)
-print('Training ended:\n\t test loss {:5.4f}'.format(test_loss))
+if args.verbose:
+    print('Training ended:\n\ttest loss {:5.4f}'.format(test_loss))

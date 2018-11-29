@@ -20,7 +20,8 @@ def detach_hidden_state(hidden_state):
     return None
 
 
-def train(model, data_loader, criterion, optimizer, grad_clip, track_hidden, log_interval, device):
+def train(model, data_loader, criterion, optimizer, grad_clip,
+        track_hidden, log_interval, device, verbose):
     """
     Train the model for one epoch over the whole dataset.
     """
@@ -59,8 +60,9 @@ def train(model, data_loader, criterion, optimizer, grad_clip, track_hidden, log
 
         # Print the loss every log-interval mini-batches and save it to the trace
         if i % log_interval == log_interval - 1:
-            print('\t[batches %5d / %5d] loss: %.5f' %
-                ((i + 1) * batch_size, dataset_size, running_loss / log_interval))
+            if verbose:
+                print('\t[batches %5d / %5d] loss: %.5f' %
+                    ((i + 1) * batch_size, dataset_size, running_loss / log_interval))
             loss_trace.append(running_loss / log_interval)
             running_loss = 0.0
 
