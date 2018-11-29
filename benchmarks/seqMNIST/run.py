@@ -140,25 +140,25 @@ model = init_model(
 
 if args.optim == 'adam':
     optimizer = optim.Adam(model.parameters(),
-    lr=args.lr, eps=1e-9, weight_decay=args.l2_norm, betas=[0.9, 0.98])
+        lr=args.lr, eps=1e-9, weight_decay=args.l2_norm, betas=[0.9, 0.98])
 elif args.optim == 'sparseadam':
     optimizer = optim.SparseAdam(model.parameters(),
-    lr=args.lr, eps=1e-9, weight_decay=args.l2_norm, betas=[0.9, 0.98])
+        lr=args.lr, eps=1e-9, weight_decay=args.l2_norm, betas=[0.9, 0.98])
 elif args.optim == 'adamax':
     optimizer = optim.Adamax(model.parameters(),
-    lr=args.lr, eps=1e-9, weight_decay=args.l2_norm, betas=[0.9, 0.98])
+        lr=args.lr, eps=1e-9, weight_decay=args.l2_norm, betas=[0.9, 0.98])
 elif args.optim == 'rmsprop':
     optimizer = optim.RMSprop(model.parameters(),
-    lr=args.lr, eps=1e-10, weight_decay=args.l2_norm, momentum=0.9)
+        lr=args.lr, eps=1e-10, weight_decay=args.l2_norm, momentum=0.9)
 elif args.optim == 'sgd':
     optimizer = optim.SGD(model.parameters(),
-    lr=args.lr, weight_decay=args.l2_norm, momentum=0.9) # 0.01
+        lr=args.lr, weight_decay=args.l2_norm, momentum=0.9) # 0.01
 elif args.optim == 'adagrad':
     optimizer = optim.Adagrad(model.parameters(),
-    lr=args.lr, weight_decay=args.l2_norm, lr_decay=0.9)
+        lr=args.lr, weight_decay=args.l2_norm, lr_decay=0.9)
 elif args.optim == 'adadelta':
     optimizer = optim.Adadelta(model.parameters(),
-    lr=args.lr, weight_decay=args.l2_norm, rho=0.9)
+        lr=args.lr, weight_decay=args.l2_norm, rho=0.9)
 else:
     raise ValueError(r'Optimizer {0} not recognized'.format(args.optim))
 
@@ -237,7 +237,8 @@ try:
             best_loss = val_loss
    
 except KeyboardInterrupt:
-    print('Keyboard interruption. Terminating training.')
+    if args.verbose:
+        print('Keyboard interruption. Terminating training.')
 
 # Save the trace of the loss during training
 with open(save_path + '/trace.csv', 'w') as f:
