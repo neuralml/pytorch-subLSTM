@@ -30,7 +30,7 @@ def train(model, data_loader, criterion, optimizer, grad_clip,
     dataset_size, batch_size = len(data_loader.dataset), data_loader.batch_size
 
     # Keep track or the hidden state over the whole epoch. This allows faster training?
-    # hidden = None
+    hidden = None
 
     for i, data in enumerate(data_loader):
         # Load one batch into the device being used.
