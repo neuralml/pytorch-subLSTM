@@ -25,9 +25,12 @@ from subLSTM.nn import SubLSTM
 from wrappers import init_model
 from utils import train, test, compute_accuracy
 
+########################################################################################
+# PARSE THE INPUT
+########################################################################################
+
 parser = argparse.ArgumentParser(description='PyTorch Sequential MNIST LSTM model test')
 
-########################################################################################
 # Model parameters
 parser.add_argument('--model', type=str, default='subLSTM', 
     help='RNN model tu use. One of subLSTM|fix-subLSTM|LSTM|GRU')
@@ -79,11 +82,11 @@ parser.add_argument('--cuda', action='store_true',
 parser.add_argument('--verbose', action='store_true',
     help='print the progress of training to std output.')
 
-########################################################################################
-# Setting up
-########################################################################################
-
 args = parser.parse_args()
+
+########################################################################################
+# SETTING UP THE DIVICE AND SEED
+########################################################################################
 
 torch.manual_seed(args.seed)
 if args.cuda and torch.cuda.is_available():
