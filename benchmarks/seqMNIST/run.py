@@ -27,18 +27,29 @@ from utils import train, test
 
 parser = argparse.ArgumentParser(description='PyTorch Sequential MNIST LSTM model test')
 
+########################################################################################
+# Model parameters
 parser.add_argument('--model', type=str, default='subLSTM', 
     help='RNN model tu use. One of subLSTM|fix-subLSTM|LSTM|GRU')
 parser.add_argument('--nlayers', type=int, default=1,
     help='number of layers')
 parser.add_argument('--nhid', type=int, default=50,
     help='number of hidden units per layer')
+
+# Data parameters
 parser.add_argument('--data', type=str, default='MNIST',
     help='location of the data set')
 parser.add_argument('--train-test-split', type=float, default=0.2,
     help='proportion of trainig data used for validation')
 parser.add_argument('--batch-size', type=int, default=50, metavar='N',
     help='batch size')
+parser.add_argument('--shuffle', action='store_true',
+    help='shuffle the data at the start of each epoch.')
+parser.add_argument('--input-size', type=int, default=1,
+    help='the default dimensionality of each input timestep.'
+    'defaults to 1, meaning instances are treated like one large 1D sequence')
+
+# Training parameters
 parser.add_argument('--epochs', type=int, default=40,
     help='max number of training epochs')
 parser.add_argument('--optim', type=str, default='rmsprop',
@@ -49,44 +60,37 @@ parser.add_argument('--l2-norm', type=float, default=0,
     help='weight of L2 norm')
 parser.add_argument('--clip', type=float, default=1,
     help='gradient clipping')
-parser.add_argument('--seed', type=int, default=18092,
-    help='random seed')
-parser.add_argument('--cuda', action='store_true',
-    help='use CUDA')
+parser.add_argument('--track-hidden', action='store_true',
+    help='keep the hidden state values across a whole epoch of training')
 parser.add_argument('--log-interval', type=int, default=20, metavar='N',
     help='report interval')
+
+# Replicability and storage
 parser.add_argument('--save', type=str,  default='results',
     help='path to save the final model')
+parser.add_argument('--seed', type=int, default=18092,
+    help='random seed')
+
+# CUDA
+parser.add_argument('--cuda', action='store_true',
+    help='use CUDA')
+
+# Print options
+parser.add_argument('--verbose', action='store_true',
+    help='print the progress of training to std output.')
+
+########################################################################################
+# Setting up
+########################################################################################
 
 args = parser.parse_args()
 
-print('Training {} model with parameters:'
-        '\n\tnumber of layers: {}'
-        '\n\thidden units: {}'
-        '\n\tmax epochs: {}'
-        '\n\tbatch size: {}'
-        '\n\toptimizer: {}, lr={}, l2={}'.format(
-            args.model, args.nlayers, args.nhid, args.epochs,
-            args.batch_size, args.optim, args.lr, args.l2_norm
-        ))
-
 torch.manual_seed(args.seed)
-
 if args.cuda and torch.cuda.is_available():
     torch.cuda.manual_seed(args.seed)
     device = torch.device('cuda')
-    print('\tusing CUDA')
-
 else:
     device = torch.device('cpu')
-    print('\tusing CPU')
-    if torch.cuda.is_available():
-        print('\tWARNING: CUDA device available but not being used. \
-            run with --cuda option to enable it.\n\n')
-
-if args.model in ['subLSTM', 'fix-subLSTM'] and args.l2_norm == 0:
-    print('\tWARNING: subLSTMs are prone to exploding gradients. Consider using '
-        'L2 regularization by setting parameter --l2-norm to a value greater than 0')
 
 ########################################################################################
 # LOAD DATA
@@ -94,7 +98,7 @@ if args.model in ['subLSTM', 'fix-subLSTM'] and args.l2_norm == 0:
 
 transform = trans.Compose([
     trans.ToTensor(),
-    trans.Lambda(lambda x: x.view(-1, 1))
+    trans.Lambda(lambda x: x.view(-1, args.input_size))
 ])
 
 # Load data
@@ -109,23 +113,23 @@ val_size = int(N * 0.2)
 train_data, validation_data = torch.utils.data.random_split(
     train_data, [N - val_size, val_size])
 
-train_data = DataLoader(train_data, batch_size=batch_size, shuffle=True)
-validation_data = DataLoader(validation_data, batch_size=batch_size, shuffle=True)
+train_data = DataLoader(train_data, batch_size=batch_size, shuffle=args.shuffle)
+validation_data = DataLoader(validation_data, batch_size=batch_size, shuffle=False)
 
 test_data = dataset.MNIST(
     root=data_path, train=False, transform=transform, download=True)
-test_data = DataLoader(test_data, batch_size=batch_size, shuffle=True)
+test_data = DataLoader(test_data, batch_size=batch_size, shuffle=False)
 
 ########################################################################################
 # CREATE THE MODEL
 ########################################################################################
 
-input_size, hidden_size, n_classes = 1, args.nhid, 10
+input_size, hidden_size, n_classes = args.input_size, args.nhid, 10
 
 model = init_model(
     model_type=args.model,
     n_layers=args.nlayers, hidden_size=args.nhid,
-    input_size=1, output_size=10, class_task=True,
+    input_size=input_size, output_size=10, class_task=True,
     device=device,
 )
 
@@ -136,10 +140,10 @@ model = init_model(
 if args.optim == 'adam':
     optimizer = optim.Adam(model.parameters(),
     lr=args.lr, eps=1e-9, weight_decay=args.l2_norm, betas=[0.9, 0.98])
-if args.optim == 'sparseadam':
+elif args.optim == 'sparseadam':
     optimizer = optim.SparseAdam(model.parameters(),
     lr=args.lr, eps=1e-9, weight_decay=args.l2_norm, betas=[0.9, 0.98])
-if args.optim == 'adamax':
+elif args.optim == 'adamax':
     optimizer = optim.Adamax(model.parameters(),
     lr=args.lr, eps=1e-9, weight_decay=args.l2_norm, betas=[0.9, 0.98])
 elif args.optim == 'rmsprop':
@@ -170,9 +174,30 @@ save_path = args.save + '/{0}_{1}_{2}'.format(args.model, args.nlayers, args.nhi
 if not os.path.exists(save_path):
     os.makedirs(save_path)
 
+if args.verbose:
+    print('Training {} model with parameters:'
+            '\n\tnumber of layers: {}'
+            '\n\thidden units: {}'
+            '\n\tmax epochs: {}'
+            '\n\tbatch size: {}'
+            '\n\toptimizer: {}, lr={}, l2={}'.format(
+                args.model, args.nlayers, hidden_size, epochs,
+                batch_size, args.optim, args.lr, args.l2_norm
+            ))
+
+    if args.cuda and torch.cuda.is_available():
+        print('\tusing CUDA')
+    else:
+        print('\tusing CPU')
+        if torch.cuda.is_available():
+            print('\tWARNING: CUDA device available but not being used. \
+                run with --cuda option to enable it.\n\n')
+
 try:
     for e in range(epochs):
-        print('training epoch {0}'.format(e + 1))
+        if args.verbose:
+            print('training epoch {0}'.format(e + 1))
+
         start_time = time.time()
 
         # Train model for 1 epoch over whole dataset
@@ -180,7 +205,9 @@ try:
             model=model, data_loader=train_data, 
             criterion=criterion, optimizer=optimizer, grad_clip=args.clip,
             log_interval=log_interval,
-            device=device
+            device=device,
+            track_hidden=args.track_hidden,
+            verbose=args.verbose
         )
 
         loss_trace.extend(epoch_trace)
@@ -188,14 +215,15 @@ try:
         # Check validation loss
         val_loss = test(model, validation_data, criterion, device)
 
-        print('epoch {} finished \
-            \n\ttotal time {} \
-            \n\ttraining_loss = {:5.4f} \
-            \n\tvalidation_loss = {:5.4f}'.format(
-                e + 1,
-                time.time() - start_time,
-                np.sum(epoch_trace) / len(epoch_trace),
-                val_loss))
+        if args.verbose:
+            print('epoch {} finished \
+                \n\ttotal time {} \
+                \n\ttraining_loss = {:5.4f} \
+                \n\tvalidation_loss = {:5.4f}'.format(
+                    e + 1,
+                    time.time() - start_time,
+                    np.sum(epoch_trace) / len(epoch_trace),
+                    val_loss))
 
         if val_loss < best_loss:
             with open(save_path + '/model.pt', 'wb') as f:
@@ -223,4 +251,5 @@ with open(save_path + '/model.pt', 'rb') as f:
     model.load_state_dict(torch.load(f)['model_state'])
 
 test_loss = test(model, test_data, criterion, device)
-print('Training ended:\n\t test loss {:5.4f}'.format(test_loss))
+if args.verbose:
+    print('Training ended:\n\ttest loss {:5.4f}'.format(test_loss))
