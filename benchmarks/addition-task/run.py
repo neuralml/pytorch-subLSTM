@@ -10,26 +10,24 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader
-import torchvision.transforms as trans
-import torchvision.datasets as dataset
+from torch.utils.data import DataLoader, Dataset
 
-# use the source for debugging instead of the installed module
+
 if __debug__:
     sys.path.insert(0, '../../src/')
 
-# To use wrapper.py and utils.py
 sys.path.insert(0, '../')
 
 from subLSTM.nn import SubLSTM
 from wrappers import init_model
-from utils import train, test, compute_accuracy
+from utils import train, test
+
 
 ########################################################################################
 # PARSE THE INPUT
 ########################################################################################
 
-parser = argparse.ArgumentParser(description='PyTorch Sequential MNIST LSTM model test')
+parser = argparse.ArgumentParser(description='Addition task')
 
 # Model parameters
 parser.add_argument('--model', type=str, default='subLSTM', 
@@ -38,25 +36,36 @@ parser.add_argument('--nlayers', type=int, default=1,
     help='number of layers')
 parser.add_argument('--nhid', type=int, default=50,
     help='number of hidden units per layer')
+parser.add_argument('--gact', type=str, default='relu',
+    help='gate activation function relu|sig')
+parser.add_argument('--gbias', type=float, default=0,
+    help='gating bias')
 
 # Data parameters
-parser.add_argument('--data', type=str, default='MNIST',
-    help='location of the data set')
-parser.add_argument('--train-test-split', type=float, default=0.2,
+parser.add_argument('--seq-length', type=int, default=20,
+    help='sequence length')
+parser.add_argument('--num-addends', type=int, default=2,
+    help='the number of addends to be unmasked in each sequence'
+    'must be less than the sequence length')
+parser.add_argument('--min-arg', type=float, default=-10,
+    help='minimum value of the addends')
+parser.add_argument('--max-arg', type=float, default=10,
+    help='maximum value of the addends')
+parser.add_argument('--training-size', type=int, default=1000,
+    help='size of the randomly created training set')
+parser.add_argument('--testing-size', type=int, default=200,
+    help='size of the randomly created test set')
+parser.add_argument('--train-val-split', type=float, default=0.2,
     help='proportion of trainig data used for validation')
 parser.add_argument('--batch-size', type=int, default=50, metavar='N',
     help='batch size')
-parser.add_argument('--shuffle', action='store_true',
-    help='shuffle the data at the start of each epoch.')
-parser.add_argument('--input-size', type=int, default=1,
-    help='the default dimensionality of each input timestep.'
-    'defaults to 1, meaning instances are treated like one large 1D sequence')
 
 # Training parameters
 parser.add_argument('--epochs', type=int, default=40,
     help='max number of training epochs')
 parser.add_argument('--optim', type=str, default='rmsprop',
-    help='learning rule, supports adam|sparseadam|adamax|rmsprop|sgd|adagrad|adadelta')
+    help='gradient descent method,'
+    'supports adam|sparseadam|adamax|rmsprop|sgd|adagrad|adadelta')
 parser.add_argument('--lr', type=float, default=1e-4,
     help='initial learning rate')
 parser.add_argument('--l2-norm', type=float, default=0,
@@ -65,7 +74,7 @@ parser.add_argument('--clip', type=float, default=1,
     help='gradient clipping')
 parser.add_argument('--track-hidden', action='store_true',
     help='keep the hidden state values across a whole epoch of training')
-parser.add_argument('--log-interval', type=int, default=20, metavar='N',
+parser.add_argument('--log-interval', type=int, default=10, metavar='N',
     help='report interval')
 
 # Replicability and storage
@@ -88,6 +97,7 @@ args = parser.parse_args()
 # SETTING UP THE DIVICE AND SEED
 ########################################################################################
 
+np.random.seed(args.seed)
 torch.manual_seed(args.seed)
 if args.cuda and torch.cuda.is_available():
     torch.cuda.manual_seed(args.seed)
@@ -95,45 +105,64 @@ if args.cuda and torch.cuda.is_available():
 else:
     device = torch.device('cpu')
 
-
 ########################################################################################
-# LOAD DATA
+# CREATE THE DATA GENERATOR
 ########################################################################################
 
-transform = trans.Compose([
-    trans.ToTensor(),
-    trans.Lambda(lambda x: x.view(-1, args.input_size))
-])
+seq_size, num_addends = args.seq_length, args.num_addends
+min_arg, max_arg = args.min_arg, args.max_arg
+N, batch_size, test_size = args.training_size, args.batch_size, args.testing_size
 
-# Load data
-data_path, batch_size = args.data, args.batch_size
+train_size = int(N * (1 - args.train_val_split))
+val_size = N - train_size
 
-train_data = dataset.MNIST(
-    root=data_path, train=True, transform=transform, download=True)
+class BatchGenerator:
+    def __init__(self,  training_size, batch_size, min_arg, max_arg):
+        self.min_arg = min_arg
+        self.max_arg = max_arg
+        self.batch_size = batch_size
+        self.training_size = training_size
 
-# Split train data into training and validation sets
-N = len(train_data)
-val_size = int(N * 0.2)
-train_data, validation_data = torch.utils.data.random_split(
-    train_data, [N - val_size, val_size])
+    def __iter__(self):
+        for _ in range(len(self)):
+            yield self.next_batch()
 
-train_data = DataLoader(train_data, batch_size=batch_size, shuffle=args.shuffle)
-validation_data = DataLoader(validation_data, batch_size=batch_size, shuffle=False)
+    def __len__(self):
+        return self.training_size // self.batch_size
 
-test_data = dataset.MNIST(
-    root=data_path, train=False, transform=transform, download=True)
-test_data = DataLoader(test_data, batch_size=batch_size, shuffle=False)
+    def next_batch(self):
+        batch_size, min_arg, max_arg = self.batch_size, self.min_arg, self.max_arg
+        inputs = np.random.uniform(
+            low=min_arg, high=max_arg, size=(batch_size, seq_size, 2))
+        inputs[:, :, 1] = -1
+
+        # Neat trick to sample the positions to unmask
+        mask = np.random.rand(batch_size, seq_size).argsort(axis=1)[:,:num_addends]
+        mask.sort(axis=1)
+
+        # Mask is in the wrong shape (batch_size, num_addends) for slicing
+        inputs[range(batch_size), mask.T, 1] = 1
+        targets = np.sum(inputs[:, :, 0] * (inputs[:, :, 1] == 1), axis=1).reshape(-1, 1)
+
+        inputs = torch.as_tensor(inputs, dtype=torch.float)
+        targets = torch.as_tensor(targets, dtype=torch.float)
+
+        return inputs, targets
+
+training_data = BatchGenerator(train_size, batch_size, min_arg, max_arg)
+validation_data = BatchGenerator(val_size, val_size, min_arg, max_arg)
+test_data = BatchGenerator(test_size, test_size, min_arg, max_arg)
 
 ########################################################################################
 # CREATE THE MODEL
 ########################################################################################
 
-input_size, hidden_size, n_classes = args.input_size, args.nhid, 10
+input_size, hidden_size, responses = 2, args.nhid, 1
 
 model = init_model(
     model_type=args.model,
     n_layers=args.nlayers, hidden_size=args.nhid,
-    input_size=input_size, output_size=10, class_task=True,
+    input_size=input_size, output_size=responses, class_task=False,
     device=device
 )
 
@@ -165,7 +194,7 @@ elif args.optim == 'adadelta':
 else:
     raise ValueError(r'Optimizer {0} not recognized'.format(args.optim))
 
-criterion = nn.CrossEntropyLoss()
+criterion = nn.MSELoss()
 
 ########################################################################################
 # TRAIN MODEL
@@ -206,7 +235,7 @@ try:
 
         # Train model for 1 epoch over whole dataset
         epoch_trace = train(
-            model=model, data_loader=train_data, 
+            model=model, data_loader=training_data, 
             criterion=criterion, optimizer=optimizer, grad_clip=args.clip,
             log_interval=log_interval,
             device=device,
@@ -256,7 +285,7 @@ with open(save_path + '/model.pt', 'rb') as f:
     model.load_state_dict(torch.load(f)['model_state'])
 
 test_loss = test(model, test_data, criterion, device)
-accuracy = compute_accuracy(model, test_data, device)
+
 if args.verbose:
-    print('Training ended:\n\ttest loss {:5.4f}\n\taccuracy {:3.2%}'.format(
-        test_loss, accuracy))
+    print('Training ended:\n\ttest loss {:5.4f}'.format(
+        test_loss))
