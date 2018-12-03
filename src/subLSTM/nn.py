@@ -1,4 +1,5 @@
 import math
+from itertools import product
 
 import torch
 import torch.nn as nn
@@ -27,15 +28,12 @@ class SubLSTMCell(RNNCellBase):
 
         if fix_subLSTM:
             self.f_gate = nn.Parameter(torch.Tensor(hidden_size))
-        else:
-            self.register_parameter('f_gate', None)
 
         if bias:
             self.b_i = nn.Parameter(torch.Tensor(gate_size))
             self.b_h = nn.Parameter(torch.Tensor(gate_size))
         else:
-            self.register_parameter('b_i', None)
-            self.register_parameter('b_h', None)
+            self.b_i, self.b_h = 0, 0
 
         self.reset_parameters()
 
@@ -106,9 +104,11 @@ class SubLSTM(nn.Module):
             if bias:
                 b_i = nn.Parameter(torch.Tensor(gate_size))
                 b_h = nn.Parameter(torch.Tensor(gate_size))
+            else:
+                b_i, b_h = 0, 0
 
-                layer_param.extend([b_i, b_h])
-                name_template.extend(['b_i_{}{}', 'b_r_{}{}'])
+            layer_param.extend([b_i, b_h])
+            name_template.extend(['b_i_{}{}', 'b_r_{}{}'])
 
             if fixed_forget:
                 f = nn.Parameter(torch.Tensor(hidden_size[layer_num]))
@@ -179,12 +179,11 @@ class SubLSTM(nn.Module):
                     outputs[time], hx[layer], w_i, w_h, b_i, b_h)
 
 
-        for time in range(timesteps):
-            for layer in range(self.num_layers):
-                out, c = _forward(time, layer)
+        for time, layer in product(range(timesteps), range(self.num_layers)):
+            out, c = _forward(time, layer)
 
-                hx[layer] = (out, c)
-                outputs[time] = out
+            hx[layer] = (out, c)
+            outputs[time] = out
 
         out = torch.stack(outputs)
         if self.batch_first:

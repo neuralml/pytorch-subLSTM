@@ -27,7 +27,7 @@ def train(model, data_loader, criterion, optimizer, grad_clip,
     """
     model.train(True)
     loss_trace, running_loss = [], 0.0
-    dataset_size, batch_size = len(data_loader.dataset), data_loader.batch_size
+    n_batches = len(data_loader)
 
     # Keep track or the hidden state over the whole epoch. This allows faster training?
     hidden = None
@@ -62,7 +62,7 @@ def train(model, data_loader, criterion, optimizer, grad_clip,
         if i % log_interval == log_interval - 1:
             if verbose:
                 print('\t[batches %5d / %5d] loss: %.5f' %
-                    ((i + 1) * batch_size, dataset_size, running_loss / log_interval))
+                    (i + 1, n_batches, running_loss / log_interval))
             loss_trace.append(running_loss / log_interval)
             running_loss = 0.0
 
