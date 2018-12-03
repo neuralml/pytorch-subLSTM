@@ -1,12 +1,9 @@
 /.vscode/
 /.idea/
 /.venv
-/*/__pycache__/
-/benchmarks/seqMNIST/results/*
+*torch_sublstm.egg-info/
+build/
+dist/
+*__pycache__/
 /benchmarks/seqMNIST/MNIST
-/torch_sublstm.egg-info/*
-/src/torch_sublstm.egg-info/*
-/build/*
-/dist/*
-src/subLSTM/__pycache__/*
-src/subLSTM/__pycache__/*
+*results
