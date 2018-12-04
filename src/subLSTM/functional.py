@@ -17,7 +17,7 @@ def SubLSTMCellF(input, hidden, W_i, W_r, b_i, b_h):
 def fixSubLSTMCellF(input, hidden, W_i, W_r, f_gate, b_i, b_h):
     h_tm1, c_tm1 = hidden
 
-    proj_input = torch.simoid(F.linear(input, W_i, b_i) + F.linear(h_tm1, W_r, b_h))
+    proj_input = torch.sigmoid(F.linear(input, W_i, b_i) + F.linear(h_tm1, W_r, b_h))
     in_gate, out_gate, z_t = proj_input.chunk(3, 1)
 
     f_gate = f_gate.clamp(0, 1)

@@ -232,6 +232,14 @@ try:
         if val_loss < best_loss:
             with open(save_path + '/model.pt', 'wb') as f:
                 torch.save({
+                    'model_params':{
+                        'model_type': args.model,
+                        'hidden_size': hidden_size,
+                        'n_layers': args.nlayers,
+                        'input_size': input_size,
+                        'output_size': 10,
+                        'class_task': True
+                    }
                     'epoch': e + 1,
                     'model_state': model.state_dict(),
                     'optimizer_state': optimizer.state_dict(),
