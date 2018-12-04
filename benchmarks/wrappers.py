@@ -12,6 +12,10 @@ class RNNClassifier(nn.Module):
         self.linear = nn.Linear(rnn_output_size, n_classes)
         self.output_layer = nn.Softmax(dim=1)
 
+    def reset_parameters(self):
+        self.rnn.reset_parameters()
+        self.linear.reset_parameters()
+
     def forward(self, input, hidden=None):
         output, hidden = self.rnn(input, hidden)
         probs = self.output_layer(self.linear(output[:, -1, :]))
@@ -26,6 +30,10 @@ class RNNRegressor(nn.Module):
         self.rnn_output_size = rnn_output_size
         self.rnn = rnn
         self.linear = nn.Linear(rnn_output_size, responses)
+
+    def reset_parameters(self):
+        self.rnn.reset_parameters()
+        self.linear.reset_parameters()
 
     def forward(self, input, hidden=None):
         output, hidden = self.rnn(input, hidden)
