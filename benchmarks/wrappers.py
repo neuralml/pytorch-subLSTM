@@ -31,6 +31,10 @@ class RNNRegressor(nn.Module):
         self.rnn = rnn
         self.linear = nn.Linear(rnn_output_size, responses)
 
+    def reset_parameters(self):
+        self.rnn.reset_parameters()
+        self.linear.reset_parameters()
+
     def forward(self, input, hidden=None):
         output, hidden = self.rnn(input, hidden)
         predicted = self.linear(output[:, -1, :])
