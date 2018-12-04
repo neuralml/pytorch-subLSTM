@@ -12,10 +12,6 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 
-
-if __debug__:
-    sys.path.insert(0, '../../src/')
-
 sys.path.insert(0, '../')
 
 from subLSTM.nn import SubLSTM
