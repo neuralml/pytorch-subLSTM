@@ -1,7 +1,9 @@
 #!/bin/bash
 
 cd ..
-source ../../.venv/bin/activate
+source activate torch
+
+export PYTHONPATH=$PYTHONPATH:../../src/ 
 
 python run.py --model subLSTM --nlayers 1 --nhid 100 \
     --optim rmsprop --lr 1e-3 --l2-norm 0.0001 --epochs 1 --batch-size 50 \
