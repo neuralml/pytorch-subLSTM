@@ -235,7 +235,7 @@ try:
                         'input_size': input_size,
                         'output_size': 10,
                         'class_task': True
-                    }
+                    },
                     'epoch': e + 1,
                     'model_state': model.state_dict(),
                     'optimizer_state': optimizer.state_dict(),

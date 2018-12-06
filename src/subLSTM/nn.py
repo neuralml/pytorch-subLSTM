@@ -69,15 +69,16 @@ class SubLSTM(nn.Module):
 
         super(SubLSTM, self).__init__()
 
-        if isinstance(hidden_size, list) and len(hidden_size) != num_layers:
-            raise ValueError(
-                'Length of hidden_size list is not the same as num_layers.'
-                'Expected {0} got {1}'.format(
-                    num_layers, len(hidden_size))
-            )
+        # Uncomment to get layers of different size. Disable for consistency with LSTM
+        # if isinstance(hidden_size, list) and len(hidden_size) != num_layers:
+        #     raise ValueError(
+        #         'Length of hidden_size list is not the same as num_layers.'
+        #         'Expected {0} got {1}'.format(
+        #             num_layers, len(hidden_size))
+        #     )
 
-        if isinstance(hidden_size, int):
-            hidden_size = [hidden_size] * num_layers
+        # if isinstance(hidden_size, int):
+        #     hidden_size = [hidden_size] * num_layers
 
         # Some python "magic" to assign all parameters as class attributes
         self.__dict__.update(locals())
@@ -90,8 +91,8 @@ class SubLSTM(nn.Module):
 
         for layer_num in range(num_layers):
 
-            layer_in_size = input_size if layer_num == 0 else hidden_size[layer_num - 1]
-            layer_out_size = hidden_size[layer_num]
+            layer_in_size = input_size if layer_num == 0 else hidden_size
+            layer_out_size = hidden_size
 
             gate_size = num_gates * layer_out_size
 
@@ -111,7 +112,7 @@ class SubLSTM(nn.Module):
             name_template.extend(['b_i_{}{}', 'b_r_{}{}'])
 
             if fixed_forget:
-                f = nn.Parameter(torch.Tensor(hidden_size[layer_num]))
+                f = nn.Parameter(torch.Tensor(hidden_size))
 
                 layer_param.append(f)
                 name_template.append('f_{}{}')
@@ -131,8 +132,8 @@ class SubLSTM(nn.Module):
             for param_names in self._all_params]
 
     def reset_parameters(self):
+        stdv = 1.0 / math.sqrt(self.hidden_size)
         for l in range(self.num_layers):
-            stdv = 1.0 / math.sqrt(self.hidden_size[l])
             for weight in self.all_weights[l]:
                 weight.data.uniform_(-stdv, stdv)
 
@@ -157,7 +158,7 @@ class SubLSTM(nn.Module):
             for l in range(self.num_layers):
                 # use input.new_zeros so dtype and device are the same as the input's
                 hidden = input.new_zeros(
-                    (max_batch_size, self.hidden_size[l]), requires_grad=False)
+                    (max_batch_size, self.hidden_size), requires_grad=False)
                 hx.append((hidden, hidden))
 
         Ws = self.all_weights

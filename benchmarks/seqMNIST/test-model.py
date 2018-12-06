@@ -30,18 +30,8 @@ parser.add_argument('--model', type=str, help='path to saved model')
 # DATA
 parser.add_argument('--data', type=str, default='MNIST', help='path to MNIST dataset')
 
-# ANALYSIS
-parser.add_argument('--record-act', action='store_true',
-    help='record the activations of units and gates')
-parser.add_argument('--save', type=str, default='',
-    help='path folder used to save recorded data')
-
 # CUDA
 parser.add_argument('--cuda', action='store_true', help='use CUDA')
-
-# Print options
-parser.add_argument('--verbose', action='store_true',
-    help='print the progress of training to std output.')
 
 args = parser.parse_args()
 
@@ -87,25 +77,10 @@ test_data = DataLoader(test_data, batch_size=20, shuffle=False)
 criterion = nn.CrossEntropyLoss()
 
 ########################################################################################
-# TEST AND SAVE
+# TEST
 ########################################################################################
-
-args.record_act = True
-
-if args.record_act:
-    hook, recordings = set_activation_recorder(model)
 
 test_loss = test(model, test_data, criterion, device)
 accuracy = compute_accuracy(model, test_data, device)
-if args.verbose:
-    print('Training ended:\n\ttest loss {:5.4f}\n\taccuracy {:3.2%}'.format(
-        test_loss, accuracy))
-
-if args.record_act and args.save:
-    if not os.path.exists(args.save):
-        os.makedirs(args.save)
-
-    with open(args.save + 'recordings.csv', mode='w') as f:
-        wr = csv.DictWriter(f, fieldnames=recordings.keys(), quoting=csv.QUOTE_ALL)
-        wr.writeheader()
-        wr.writerow(recordings)
+ print('Testing ended:\n\ttest loss {:5.4f}\n\taccuracy {:3.2%}'.format(
+    test_loss, accuracy))
