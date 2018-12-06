@@ -3,63 +3,88 @@ from itertools import product
 
 import torch
 import torch.nn as nn
+from torch.nn.modules.activation import Sigmoid
 from torch.nn.modules.rnn import RNNCellBase
 # from torch.nn.modules.rnn import PackedSequence
 # from torch.nn.utils.rnn import pack_padded_sequence as pack, pad_packed_sequence as pad
 
-from .functional import fixSubLSTMCellF, SubLSTMCellF
 
-
-# noinspection PyPep8Naming,PyShadowingBuiltins
 class SubLSTMCell(RNNCellBase):
-    def __init__(self, input_size, hidden_size, bias=True, fix_subLSTM=False):
+    def __init__(self, input_size, hidden_size, bias=True):
         super(SubLSTMCell, self).__init__()
 
         # Set the parameters
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.bias = bias
-        self._fix_f_gate = fix_subLSTM
 
-        gate_size = (3 if fix_subLSTM else 4) * hidden_size
+        gate_size = 4 * hidden_size
 
-        self.W_i = nn.Parameter(torch.Tensor(gate_size, input_size))
-        self.W_h = nn.Parameter(torch.Tensor(gate_size, hidden_size))
+        self.input_layer = nn.Linear(input_size, gate_size, bias=bias)
+        self.recurrent_layer = nn.Linear(hidden_size, gate_size, bias=bias)
 
-        if fix_subLSTM:
-            self.f_gate = nn.Parameter(torch.Tensor(hidden_size))
-
-        if bias:
-            self.b_i = nn.Parameter(torch.Tensor(gate_size))
-            self.b_h = nn.Parameter(torch.Tensor(gate_size))
-        else:
-            self.b_i, self.b_h = 0, 0
+        self.gates = Sigmoid()
+        self.output = Sigmoid()
 
         self.reset_parameters()
 
-    @property
-    def is_fix_subLSTM(self):
-        return self._fix_f_gate
+    def reset_parameters(self):
+        for module in self.children():
+            try:
+                module.reset_parameters()
+            except AttributeError:
+                pass
+
+    def forward(self, input: torch.Tensor, hx):
+        h_tm1, c_tm1 = hx, hx
+
+        proj = self.gates(self.input_layer(input) + self.recurrent_layer(h_tm1))
+        in_gate, out_gate, z_t, f_gate = proj_input.chunk(4, 1)
+
+        c_t = c_tm1 * f_gate + z_t - in_gate
+        h_t = self.output(c_t) - out_gate
+
+        return h_t, c_t
+
+
+class fixSubLSTMCell(RNNCellBase):
+    def __init__(self, input_size, hidden_size, bias=True):
+        super(SubLSTMCell, self).__init__()
+
+        # Set the parameters
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.bias = bias
+
+        gate_size = 3 * hidden_size
+
+        self.input_layer = nn.Linear(input_size, gate_size, bias=bias)
+        self.recurrent_layer = nn.Linear(hidden_size, gate_size, bias=bias)
+        self.f_gate = nn.Parameter(torch.Tensor(hidden_size))
+
+        self.gates = Sigmoid()
+        self.output = Sigmoid()
+
+        self.reset_parameters()
 
     def reset_parameters(self):
-        std = 1.0 / math.sqrt(self.hidden_size)
-        for weight in self.parameters():
-            weight.data.uniform_(-std, std)
+        for module in self.children():
+            try:
+                module.reset_parameters()
+            except AttributeError:
+                pass
 
-    def forward(self, input: torch.Tensor, hx=None):
-        self.check_forward_input(input)
+    def forward(self, input, hx):
+        h_tm1, c_tm1 = hx, hx
 
-        if hx is None:
-            hx = input.new_zeros(input.size(0), self.hidden_size, requires_grad=False)
-            hx = (hx, hx)
+        proj = self.gates(self.input_layer(input) + self.recurrent_layer(h_tm1))
+        in_gate, out_gate, z_t = proj_input.chunk(3, 1)
+        f_gate = self.f_gate.clamp(0, 1)
 
-        self.check_forward_hidden(input, hx[0], '[0]')
-        self.check_forward_hidden(input, hx[1], '[1]')
+        c_t = c_tm1 * f_gate + z_t - in_gate
+        h_t = self.output(c_t) - out_gate
 
-        if self._fix_f_gate:
-            return fixSubLSTMCellF(
-                input, hx, self.W_i, self.W_h, self.f_gate, self.b_i, self.b_h)
-        return SubLSTMCellF(input, hx, self.W_i, self.W_h, self.b_i, self.b_h)
+        return h_t, c_t
 
 
 # noinspection PyShadowingBuiltins,PyPep8Naming
@@ -83,9 +108,6 @@ class SubLSTM(nn.Module):
         # Some python "magic" to assign all parameters as class attributes
         self.__dict__.update(locals())
 
-        num_gates = 3 if fixed_forget else 4
-
-        self._all_params = []
         # Use for bidirectional later
         suffix = ''
 
@@ -94,24 +116,8 @@ class SubLSTM(nn.Module):
             layer_in_size = input_size if layer_num == 0 else hidden_size
             layer_out_size = hidden_size
 
-            gate_size = num_gates * layer_out_size
-
-            w_i = nn.Parameter(torch.Tensor(gate_size, layer_in_size))
-            w_h = nn.Parameter(torch.Tensor(gate_size, layer_out_size))
-
-            layer_param = [w_i, w_h]
-            name_template = ['W_{}{}', 'R_{}{}']
-
-            if bias:
-                b_i = nn.Parameter(torch.Tensor(gate_size))
-                b_h = nn.Parameter(torch.Tensor(gate_size))
-            else:
-                b_i, b_h = 0, 0
-
-            layer_param.extend([b_i, b_h])
-            name_template.extend(['b_i_{}{}', 'b_r_{}{}'])
-
             if fixed_forget:
+<<<<<<< Updated upstream
                 f = nn.Parameter(torch.Tensor(hidden_size))
 
                 layer_param.append(f)
@@ -120,8 +126,13 @@ class SubLSTM(nn.Module):
             param_names = [x.format(layer_num, suffix) for x in name_template]
             for name, value in zip(param_names, layer_param):
                 setattr(self, name, value)
+=======
+                layer = fixSubLSTMCell(layer_in_size, layer_out_size, bias)
+            else:
+                layer = SubLSTMCell(layer_in_size, layer_out_size, bias)
+>>>>>>> Stashed changes
 
-            self._all_params.append(param_names)
+            self.add_module('layer_{}'.format(layer_num + 1), layer)
 
         self.flatten_parameters()
         self.reset_parameters()
@@ -131,11 +142,20 @@ class SubLSTM(nn.Module):
         return [[getattr(self, name) for name in param_names] 
             for param_names in self._all_params]
 
+    @property
+    def all_layers(self):
+        return [getattr(self, 'layer_{}'.format(layer + 1)) for layer in range(self.num_layers)]
+
     def reset_parameters(self):
+<<<<<<< Updated upstream
         stdv = 1.0 / math.sqrt(self.hidden_size)
         for l in range(self.num_layers):
             for weight in self.all_weights[l]:
                 weight.data.uniform_(-stdv, stdv)
+=======
+        for module in self.children():
+            module.reset_parameters()
+>>>>>>> Stashed changes
 
     def flatten_parameters(self):
         pass
@@ -161,29 +181,18 @@ class SubLSTM(nn.Module):
                     (max_batch_size, self.hidden_size), requires_grad=False)
                 hx.append((hidden, hidden))
 
-        Ws = self.all_weights
         if self.batch_first:
             input = input.transpose(0, 1)
 
         timesteps = input.size(0)
         outputs = [input[i] for i in range(timesteps)]
+        all_layers = self.all_layers
 
-        if self.fixed_forget:
-            def _forward(time, layer):
-                w_i, w_h, b_i, b_h, f = Ws[layer]
-                return fixSubLSTMCellF(
-                    outputs[time], hx[layer], w_i, w_h, f, b_i, b_h)
-        else:
-            def _forward(time, layer):
-                w_i, w_h, b_i, b_h = Ws[layer]
-                return SubLSTMCellF(
-                    outputs[time], hx[layer], w_i, w_h, b_i, b_h)
+        for time, l in product(range(timesteps), range(self.num_layers)):
+            layer = all_layers[l]
 
-
-        for time, layer in product(range(timesteps), range(self.num_layers)):
-            out, c = _forward(time, layer)
-
-            hx[layer] = (out, c)
+            out, c = layer(outputs[time], hx[l])
+            hx[l] = (out, c)
             outputs[time] = out
 
         out = torch.stack(outputs)
@@ -214,3 +223,4 @@ class SubLSTM(nn.Module):
         # if self.bidirectional is not False:
         #     s += ', bidirectional={bidirectional}'
         return s.format(**self.__dict__)
+
