@@ -13,7 +13,8 @@ from setuptools import find_packages, setup, Command
 
 # Package meta-data.
 NAME = 'torch-sublstm'
-DESCRIPTION = 'A subLSTM implementation as described in the article "Cortical microcircuits as gated recurrent neural networks" using PyTorch'
+DESCRIPTION = 'A subLSTM implementation as described in the article \
+    "Cortical microcircuits as gated-recurrent neural networks" using PyTorch'
 URL = 'https://github.com/mllera14/subLSTM'
 EMAIL = 'm.lleramontero@bristol.ac.uk'
 AUTHOR = 'Milton Llera Montero'

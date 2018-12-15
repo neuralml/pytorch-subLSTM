@@ -105,7 +105,7 @@ else:
 # CREATE THE DATA GENERATOR
 ########################################################################################
 
-seq_size, num_addends = args.seq_length, args.num_addends
+seq_len, num_addends = args.seq_length, args.num_addends
 min_arg, max_arg = args.min_arg, args.max_arg
 N, batch_size, test_size = args.training_size, args.batch_size, args.testing_size
 
@@ -129,11 +129,11 @@ class BatchGenerator:
     def next_batch(self):
         batch_size, min_arg, max_arg = self.batch_size, self.min_arg, self.max_arg
         inputs = np.random.uniform(
-            low=min_arg, high=max_arg, size=(batch_size, seq_size, 2))
+            low=min_arg, high=max_arg, size=(batch_size, seq_len, 2))
         inputs[:, :, 1] = -1
 
         # Neat trick to sample the positions to unmask
-        mask = np.random.rand(batch_size, seq_size).argsort(axis=1)[:,:num_addends]
+        mask = np.random.rand(batch_size, seq_len).argsort(axis=1)[:,:num_addends]
         mask.sort(axis=1)
 
         # Mask is in the wrong shape (batch_size, num_addends) for slicing
