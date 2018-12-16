@@ -130,7 +130,7 @@ class BatchGenerator:
         batch_size, min_arg, max_arg = self.batch_size, self.min_arg, self.max_arg
         inputs = np.random.uniform(
             low=min_arg, high=max_arg, size=(batch_size, seq_len, 2))
-        inputs[:, :, 1] = -1
+        inputs[:, :, 1] = 0
 
         # Neat trick to sample the positions to unmask
         mask = np.random.rand(batch_size, seq_len).argsort(axis=1)[:,:num_addends]
@@ -138,7 +138,7 @@ class BatchGenerator:
 
         # Mask is in the wrong shape (batch_size, num_addends) for slicing
         inputs[range(batch_size), mask.T, 1] = 1
-        targets = np.sum(inputs[:, :, 0] * (inputs[:, :, 1] == 1), axis=1).reshape(-1, 1)
+        targets = np.sum(inputs[:, :, 0] * (inputs[:, :, 1]), axis=1).reshape(-1, 1)
 
         inputs = torch.as_tensor(inputs, dtype=torch.float)
         targets = torch.as_tensor(targets, dtype=torch.float)
