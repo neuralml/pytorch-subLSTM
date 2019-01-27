@@ -39,7 +39,7 @@ class SubLSTMCell(RNNCellBase):
         h_tm1, c_tm1 = hx, hx
 
         proj = self.gates(self.input_layer(input) + self.recurrent_layer(h_tm1))
-        in_gate, out_gate, z_t, f_gate = proj_input.chunk(4, 1)
+        in_gate, out_gate, z_t, f_gate = proj.chunk(4, 1)
 
         c_t = c_tm1 * f_gate + z_t - in_gate
         h_t = self.output(c_t) - out_gate
@@ -78,7 +78,7 @@ class fixSubLSTMCell(RNNCellBase):
         h_tm1, c_tm1 = hx, hx
 
         proj = self.gates(self.input_layer(input) + self.recurrent_layer(h_tm1))
-        in_gate, out_gate, z_t = proj_input.chunk(3, 1)
+        in_gate, out_gate, z_t = proj.chunk(3, 1)
         f_gate = self.f_gate.clamp(0, 1)
 
         c_t = c_tm1 * f_gate + z_t - in_gate
