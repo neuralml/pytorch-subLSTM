@@ -117,20 +117,9 @@ class SubLSTM(nn.Module):
             layer_out_size = hidden_size
 
             if fixed_forget:
-<<<<<<< Updated upstream
-                f = nn.Parameter(torch.Tensor(hidden_size))
-
-                layer_param.append(f)
-                name_template.append('f_{}{}')
-
-            param_names = [x.format(layer_num, suffix) for x in name_template]
-            for name, value in zip(param_names, layer_param):
-                setattr(self, name, value)
-=======
                 layer = fixSubLSTMCell(layer_in_size, layer_out_size, bias)
             else:
                 layer = SubLSTMCell(layer_in_size, layer_out_size, bias)
->>>>>>> Stashed changes
 
             self.add_module('layer_{}'.format(layer_num + 1), layer)
 
@@ -139,7 +128,7 @@ class SubLSTM(nn.Module):
 
     @property
     def all_weights(self):
-        return [[getattr(self, name) for name in param_names] 
+        return [[getattr(self, name) for name in param_names]
             for param_names in self._all_params]
 
     @property
@@ -147,15 +136,8 @@ class SubLSTM(nn.Module):
         return [getattr(self, 'layer_{}'.format(layer + 1)) for layer in range(self.num_layers)]
 
     def reset_parameters(self):
-<<<<<<< Updated upstream
-        stdv = 1.0 / math.sqrt(self.hidden_size)
-        for l in range(self.num_layers):
-            for weight in self.all_weights[l]:
-                weight.data.uniform_(-stdv, stdv)
-=======
         for module in self.children():
             module.reset_parameters()
->>>>>>> Stashed changes
 
     def flatten_parameters(self):
         pass
@@ -223,4 +205,3 @@ class SubLSTM(nn.Module):
         # if self.bidirectional is not False:
         #     s += ', bidirectional={bidirectional}'
         return s.format(**self.__dict__)
-
