@@ -8,11 +8,12 @@ from torch.nn.modules.rnn import RNNCellBase
 # from torch.nn.modules.rnn import PackedSequence
 # from torch.nn.utils.rnn import pack_padded_sequence as pack, pad_packed_sequence as pad
 
+from .functional import sublstm, fsublstm
 
-class SubLSTMCell(RNNCellBase):
+
+class SubLSTMCell(nn.Module):
     def __init__(self, input_size, hidden_size, bias=True):
-        super(SubLSTMCell, self).__init__()
-
+        super(SubLSTM, self).__init__()
         # Set the parameters
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -22,9 +23,6 @@ class SubLSTMCell(RNNCellBase):
 
         self.input_layer = nn.Linear(input_size, gate_size, bias=bias)
         self.recurrent_layer = nn.Linear(hidden_size, gate_size, bias=bias)
-
-        self.gates = Sigmoid()
-        self.output = Sigmoid()
 
         self.reset_parameters()
 
@@ -36,21 +34,16 @@ class SubLSTMCell(RNNCellBase):
                 pass
 
     def forward(self, input: torch.Tensor, hx):
-        h_tm1, c_tm1 = hx, hx
-
-        proj = self.gates(self.input_layer(input) + self.recurrent_layer(h_tm1))
-        in_gate, out_gate, z_t, f_gate = proj.chunk(4, 1)
-
-        c_t = c_tm1 * f_gate + z_t - in_gate
-        h_t = self.output(c_t) - out_gate
-
-        return h_t, c_t
+        return sublstm(
+            input, hx,
+            self.input_layer,
+            self.recurrent_layer,
+        )
 
 
-class fixSubLSTMCell(RNNCellBase):
+class fixSubLSTMCell(nn.Module):
     def __init__(self, input_size, hidden_size, bias=True):
-        super(SubLSTMCell, self).__init__()
-
+        super(fixSubLSTMCell, self).__init__()
         # Set the parameters
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -62,9 +55,6 @@ class fixSubLSTMCell(RNNCellBase):
         self.recurrent_layer = nn.Linear(hidden_size, gate_size, bias=bias)
         self.f_gate = nn.Parameter(torch.Tensor(hidden_size))
 
-        self.gates = Sigmoid()
-        self.output = Sigmoid()
-
         self.reset_parameters()
 
     def reset_parameters(self):
@@ -75,16 +65,12 @@ class fixSubLSTMCell(RNNCellBase):
                 pass
 
     def forward(self, input, hx):
-        h_tm1, c_tm1 = hx, hx
-
-        proj = self.gates(self.input_layer(input) + self.recurrent_layer(h_tm1))
-        in_gate, out_gate, z_t = proj.chunk(3, 1)
-        f_gate = self.f_gate.clamp(0, 1)
-
-        c_t = c_tm1 * f_gate + z_t - in_gate
-        h_t = self.output(c_t) - out_gate
-
-        return h_t, c_t
+        return fsublstm(
+            input, hx,
+            self.input_layer,
+            self.recurrent_layer,
+            self.f_gate
+        )
 
 
 # noinspection PyShadowingBuiltins,PyPep8Naming
@@ -110,16 +96,14 @@ class SubLSTM(nn.Module):
 
         # Use for bidirectional later
         suffix = ''
+        layer_type = SubLSTMCell if not fixed_forget else fixSubLSTMCell
 
         for layer_num in range(num_layers):
 
             layer_in_size = input_size if layer_num == 0 else hidden_size
             layer_out_size = hidden_size
 
-            if fixed_forget:
-                layer = fixSubLSTMCell(layer_in_size, layer_out_size, bias)
-            else:
-                layer = SubLSTMCell(layer_in_size, layer_out_size, bias)
+            layer = layer_type(layer_in_size, layer_out_size, bias)
 
             self.add_module('layer_{}'.format(layer_num + 1), layer)
 
