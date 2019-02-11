@@ -19,7 +19,7 @@ class RNNClassifier(nn.Module):
     def forward(self, input, hidden=None):
         output, hidden = self.rnn(input, hidden)
         probs = self.output_layer(self.linear(output[:, -1, :]))
-        
+
         return probs, hidden
 
 
@@ -38,19 +38,20 @@ class RNNRegressor(nn.Module):
     def forward(self, input, hidden=None):
         output, hidden = self.rnn(input, hidden)
         predicted = self.linear(output[:, -1, :])
-        
+
         return predicted, hidden
 
 
 def init_model(model_type, hidden_size, input_size, n_layers,
-                output_size, device, class_task=True):
+                output_size, dropout, device, class_task=True):
     if model_type == 'subLSTM':
         rnn = SubLSTM(
             input_size=input_size,
             hidden_size=hidden_size,
             num_layers=n_layers,
-            fixed_forget=False, 
-            batch_first=True
+            fixed_forget=False,
+            batch_first=True,
+            dropout=dropout
         )
 
     elif model_type == 'fix-subLSTM':
@@ -58,16 +59,18 @@ def init_model(model_type, hidden_size, input_size, n_layers,
             input_size=input_size,
             hidden_size=hidden_size,
             num_layers=n_layers,
-            fixed_forget=True, 
-            batch_first=True
+            fixed_forget=True,
+            batch_first=True,
+            dropout=dropout
         )
-    
+
     elif model_type == 'LSTM':
         rnn = nn.LSTM(
             input_size=input_size,
             hidden_size=hidden_size,
             num_layers=n_layers,
-            batch_first=True
+            batch_first=True,
+            dropout=dropout
         )
 
     elif model_type == 'GRU':
@@ -75,9 +78,10 @@ def init_model(model_type, hidden_size, input_size, n_layers,
             input_size=input_size,
             hidden_size=hidden_size,
             num_layers=n_layers,
-            batch_first=True
+            batch_first=True,
+            dropout=dropout
         )
-        
+
     else:
         raise ValueError('Unrecognized RNN type')
 
