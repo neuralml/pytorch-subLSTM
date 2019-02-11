@@ -13,7 +13,7 @@ from .functional import sublstm, fsublstm
 
 class SubLSTMCell(nn.Module):
     def __init__(self, input_size, hidden_size, bias=True):
-        super(SubLSTM, self).__init__()
+        super(SubLSTMCell, self).__init__()
         # Set the parameters
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -76,7 +76,7 @@ class fixSubLSTMCell(nn.Module):
 # noinspection PyShadowingBuiltins,PyPep8Naming
 class SubLSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers=1, bias=True,
-                    fixed_forget=True, batch_first=False):
+                    fixed_forget=True, batch_first=False, dropout=0.0):
 
         super(SubLSTM, self).__init__()
 
@@ -107,6 +107,12 @@ class SubLSTM(nn.Module):
 
             self.add_module('layer_{}'.format(layer_num + 1), layer)
 
+        if dropout > 0:
+            self.dropout = nn.Dropout(dropout)
+
+        else:
+            self.dropout = False
+
         self.flatten_parameters()
         self.reset_parameters()
 
@@ -121,7 +127,10 @@ class SubLSTM(nn.Module):
 
     def reset_parameters(self):
         for module in self.children():
-            module.reset_parameters()
+            try:
+                module.reset_parameters()
+            except AttributeError:
+                pass
 
     def flatten_parameters(self):
         pass
@@ -158,6 +167,10 @@ class SubLSTM(nn.Module):
             layer = all_layers[l]
 
             out, c = layer(outputs[time], hx[l])
+
+            if self.dropout:
+                out = self.dropout(out)
+
             hx[l] = (out, c)
             outputs[time] = out
 
