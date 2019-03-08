@@ -32,7 +32,7 @@ def _sublstm_forward(input, hx, weights, num_layers):
 
     return output, hx
 
-
+@jit.script
 def _fsublstm_forward(input, hx, weights, num_layers):
     # type: (List[Tensor], List[Tuple[Tensor, Tensor]], List[List[Tensor]], int) -> Tuple[Tensor, List[Tuple[Tensor, Tensor]]]
     timesteps = len(input)
@@ -149,9 +149,10 @@ class SubLSTM(nn.Module):
                 # NB: this is an INPLACE function on all_weights, that's why the
                 # no_grad() is necessary.
                 torch._cudnn_rnn_flatten_weight(
-                    all_weights, (4 if self.bias else 2),
-                    self.input_size, rnn.get_cudnn_mode(self.mode), self.hidden_size, self.num_layers,
+                    all_weights, (4 if self.bias else 2) + (1 if self.fixed_forget else 0),
+                    self.input_size, rnn.get_cudnn_mode('LSTM'), self.hidden_size, self.num_layers,
                     self.batch_first, bool(self.bidirectional))
+        # pass
 
     def _apply(self, fn):
         ret = super(SubLSTM, self)._apply(fn)
