@@ -1,11 +1,13 @@
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
-
-def sublstm(input, hidden, input_layer, recurrent_layer):
+@torch.jit.script
+def sublstm(input, hidden, W, R, bi, bh):
+    # type: (Tensor, Tuple[Tensor, Tensor], Tensor, Tensor, Tensor, Tensor) -> Tuple[Tensor, Tensor]
     h_tm1, c_tm1 = hidden
-    proj_input = torch.sigmoid(input_layer(input) + recurrent_layer(h_tm1))
 
+    proj_input = torch.sigmoid(F.linear(input, W , bi) + F.linear(h_tm1, R, bh))
     in_gate, out_gate, z_t, f_gate = proj_input.chunk(4, 1)
 
     c_t = c_tm1 * f_gate + z_t - in_gate
@@ -13,9 +15,12 @@ def sublstm(input, hidden, input_layer, recurrent_layer):
 
     return h_t, c_t
 
-def fsublstm(input, hidden, input_layer, recurrent_layer, f_gate=None):
+@torch.jit.script
+def fsublstm(input, hidden, W, R, bi, bh, f_gate):
+    # type: (Tensor, Tuple[Tensor, Tensor], Tensor, Tensor, Tensor, Tensor, Tensor) -> Tuple[Tensor, Tensor]
     h_tm1, c_tm1 = hidden
-    proj_input = torch.sigmoid(input_layer(input) + recurrent_layer(h_tm1))
+
+    proj_input = torch.sigmoid(F.linear(input, W , bi) + F.linear(h_tm1, R, bh))
 
     in_gate, out_gate, z_t = proj_input.chunk(3, 1)
     f_gate = f_gate.clamp(0, 1)
