@@ -4,14 +4,13 @@ import numbers
 
 import torch
 import torch.nn as nn
-import torch.jit as jit
 from torch.nn.modules.activation import Sigmoid
 # from torch.nn.modules.rnn import PackedSequence
 # from torch.nn.utils.rnn import pack_padded_sequence as pack, pad_packed_sequence as pad
 
 from .functional import sublstm, fsublstm
 
-@jit.script
+@torch.jit.script
 def _sublstm_forward(input, hx, weights, num_layers):
     # type: (List[Tensor], List[Tuple[Tensor, Tensor]], List[List[Tensor]], int) -> Tuple[Tensor, List[Tuple[Tensor, Tensor]]]
     timesteps = len(input)
@@ -32,7 +31,7 @@ def _sublstm_forward(input, hx, weights, num_layers):
 
     return output, hx
 
-@jit.script
+@torch.jit.script
 def _fsublstm_forward(input, hx, weights, num_layers):
     # type: (List[Tensor], List[Tuple[Tensor, Tensor]], List[List[Tensor]], int) -> Tuple[Tensor, List[Tuple[Tensor, Tensor]]]
     timesteps = len(input)
