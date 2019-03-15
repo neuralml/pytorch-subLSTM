@@ -3,9 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 @torch.jit.script
-def sublstm(input, hidden, W, R, bi, bh):
-    # type: (Tensor, Tuple[Tensor, Tensor], Tensor, Tensor, Tensor, Tensor) -> Tuple[Tensor, Tensor]
-    h_tm1, c_tm1 = hidden
+def sublstm(input, h_tm1, c_tm1, W, R, bi, bh):
+    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor) -> Tuple[Tensor, Tensor]
 
     proj_input = torch.sigmoid(F.linear(input, W , bi) + F.linear(h_tm1, R, bh))
     in_gate, out_gate, z_t, f_gate = proj_input.chunk(4, 1)
@@ -16,10 +15,8 @@ def sublstm(input, hidden, W, R, bi, bh):
     return h_t, c_t
 
 @torch.jit.script
-def fsublstm(input, hidden, W, R, bi, bh, f_gate):
-    # type: (Tensor, Tuple[Tensor, Tensor], Tensor, Tensor, Tensor, Tensor, Tensor) -> Tuple[Tensor, Tensor]
-    h_tm1, c_tm1 = hidden
-
+def fsublstm(input, h_tm1, c_tm1, W, R, bi, bh, f_gate):
+    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor) -> Tuple[Tensor, Tensor]
     proj_input = torch.sigmoid(F.linear(input, W , bi) + F.linear(h_tm1, R, bh))
 
     in_gate, out_gate, z_t = proj_input.chunk(3, 1)

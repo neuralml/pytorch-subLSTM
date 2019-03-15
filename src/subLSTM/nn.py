@@ -11,46 +11,48 @@ from torch.nn.modules.activation import Sigmoid
 from .functional import sublstm, fsublstm
 
 @torch.jit.script
-def _sublstm_forward(input, hx, weights, num_layers):
-    # type: (List[Tensor], List[Tuple[Tensor, Tensor]], List[List[Tensor]], int) -> Tuple[Tensor, List[Tuple[Tensor, Tensor]]]
+def _sublstm_forward(input, hidden, weights, num_layers):
+    # type: (List[Tensor], Tuple[Tensor, Tensor], List[List[Tensor]], int) -> Tuple[List[Tensor], Tuple[Tensor, Tensor]]
     timesteps = len(input)
+    hx, cx = hidden
 
     for time in range(timesteps):
+        new_h, new_c = torch.zeros_like(hx), torch.zeros_like(cx)
         for l in range(num_layers):
             W, R, bi, bh = weights[l]
-
-            out, c = sublstm(input[time], hx[l], W, R, bi, bh)
+            h, c = sublstm(input[time], hx[l], cx[l], W, R, bi, bh)
 
             # if l < num_layers - 1 and dropout:
             #     out = dropout(out)
 
-            hx[l] = (out, c)
-            input[time] = out
+            new_h[l], new_c[l] = h, c
+            input[time] = h
 
-    output = torch.stack(input)
+        hx, cx = new_h, new_c
 
-    return output, hx
+    return input, (hx, cx)
 
 @torch.jit.script
-def _fsublstm_forward(input, hx, weights, num_layers):
-    # type: (List[Tensor], List[Tuple[Tensor, Tensor]], List[List[Tensor]], int) -> Tuple[Tensor, List[Tuple[Tensor, Tensor]]]
+def _fsublstm_forward(input, hidden, weights, num_layers):
+    # type: (List[Tensor], Tuple[Tensor, Tensor], List[List[Tensor]], int) -> Tuple[List[Tensor], Tuple[Tensor, Tensor]]
     timesteps = len(input)
+    hx, cx = hidden
 
     for time in range(timesteps):
+        new_h, new_c = torch.zeros_like(hx), torch.zeros_like(cx)
         for l in range(num_layers):
             W, R, bi, bh, f_gate = weights[l]
-
-            out, c = fsublstm(input[time], hx[l], W, R, bi, bh, f_gate)
+            h, c = fsublstm(input[time], hx[l], cx[l], W, R, bi, bh, f_gate)
 
             # if l < num_layers - 1 and dropout:
             #     out = dropout(out)
 
-            hx[l] = (out, c)
-            input[time] = out
+            new_h[l], new_c[l] = h, c
+            input[time] = h
 
-    output = torch.stack(input)
+        hx, cx = new_h, new_c
 
-    return output, hx
+    return input, (hx, cx)
 
 
 # noinspection PyShadowingBuiltins,PyPep8Naming
@@ -93,23 +95,20 @@ class SubLSTM(nn.Module):
                 W = nn.Parameter(torch.Tensor(gate_size, layer_input_size))
                 R = nn.Parameter(torch.Tensor(gate_size, hidden_size))
 
-                layer_param = [W, R]
-                name_template = ['W_{}{}', 'R_{}{}']
-
                 if bias:
-                    b_i = nn.Parameter(torch.Tensor(gate_size))
-                    b_h = nn.Parameter(torch.Tensor(gate_size))
+                    bi = nn.Parameter(torch.Tensor(gate_size))
+                    bh = nn.Parameter(torch.Tensor(gate_size))
                 else:
-                    b_i, b_h = torch.tensor(0), torch.tensor(0)
-
-                layer_param.extend([b_i, b_h])
-                name_template.extend(['bi_{}{}', 'bh_{}{}'])
+                    bi, bh = torch.tensor(0), torch.tensor(0)
 
                 if fixed_forget:
                     f = nn.Parameter(torch.Tensor(hidden_size))
 
-                    layer_param.append(f)
-                    name_template.append('f_{}{}')
+                    layer_param = (W, R, bi, bh, f)
+                    name_template = ['W_{}{}', 'R_{}{}', 'bi_{}{}', 'bh_{}{}', 'f_{}{}']
+                else:
+                    layer_param  = (W, R, bi, bh)
+                    name_template = ['W_{}{}', 'R_{}{}', 'bi_{}{}', 'bh_{}{}']
 
                 param_names = [x.format(layer, suffix) for x in name_template]
                 for name, value in zip(param_names, layer_param):
@@ -197,25 +196,27 @@ class SubLSTM(nn.Module):
         if self.batch_first:
             input = input.transpose(0, 1)
 
+        timesteps = input.size(0)
         batch_size = input.size(1)
 
         if hx is None:
-            hx = []
-            for l in range(self.num_layers):
-                # use input.new_zeros so dtype and device are the same as the input's
-                hidden = input.new_zeros(
-                    (batch_size, self.hidden_size), requires_grad=False)
-            hx.append((hidden, hidden))
+            # use input.new_zeros so dtype and device are the same as the input's
+            hx = input.new_zeros(
+                (self.num_layers, batch_size, self.hidden_size),
+                requires_grad=False
+            )
+            hx = (hx, hx)
 
         self.check_forward_args(input, hx, None)
 
-        timesteps = input.size(0)
         output = [input[i] for i in range(timesteps)]
 
-        if self.fixed_forget:
-            output, hidden = _fsublstm_forward(output, hx, self.all_weights, self.num_layers)
-        else:
-            output, hidden  = _sublstm_forward(output, hx, self.all_weights, self.num_layers)
+        # if self.fixed_forget:
+        #     output, hidden = _fsublstm_forward(output, hx, self.all_weights, self.num_layers)
+        # else:
+        #     output, hidden  = _sublstm_forward(output, hx, self.all_weights, self.num_layers)
+        output, hidden  = _sublstm_forward(output, hx, self.all_weights, self.num_layers)
+        output = torch.stack(output)
 
         if self.batch_first:
             output = output.transpose(0, 1)
