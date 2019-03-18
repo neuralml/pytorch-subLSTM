@@ -13,7 +13,7 @@ from .functional import sublstm_forward, fsublstm_forward
 # noinspection PyShadowingBuiltins,PyPep8Naming
 class SubLSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers=1, bias=True,
-                    fixed_forget=False, batch_first=True, dropout=0.0, bidirectional=False):
+                    fixed_forget=False, batch_first=False, dropout=0.0, bidirectional=False):
 
         super(SubLSTM, self).__init__()
 

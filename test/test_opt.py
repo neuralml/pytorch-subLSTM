@@ -9,7 +9,7 @@ batch_size = 16
 timesteps = 784
 input_features = 1
 trials = 1000
-device = 'cuda:0'
+device = 'cuda'
 
 X = torch.randn(timesteps, batch_size, input_features).to(device)
 h = torch.randn(n_layers, batch_size, state_size).to(device)
@@ -20,7 +20,7 @@ def run(model):
     backward = 0
     for _ in range(trials):
         start = time.time()
-        out, (new_h, new_C) = lstm(X, (h, C))
+        out, (new_h, new_C) = model(X, (h, C))
         forward += time.time() - start
 
         start = time.time()
@@ -29,7 +29,7 @@ def run(model):
 
     return forward, backward
 
-sublstm = SubLSTM(input_features, state_size, fixed_forget=False).to(device=device)
+sublstm = SubLSTM(input_features, state_size).to(device=device)
 lstm = LSTM(input_features, state_size).to(device=device)
 
 sublstm_forward, sublstm_backward = run(sublstm)

@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import time
 
 
 def detach_hidden_state(hidden_state):
@@ -46,10 +47,18 @@ def train(model, data_loader, criterion, optimizer, grad_clip,
         hidden = detach_hidden_state(hidden) if track_hidden else None
 
         # Forward and backward steps
+        start = time.time()
         outputs, hidden = model(inputs, hidden)
+        forward = time.time() - start
 
         loss = criterion(outputs, labels)
+
+        start = time.time()
         loss.backward()
+        backward = time.time() - start
+
+        print('Forward: {} us'.format(forward * 1e-6/1e-5))
+        print('Backward: {} us'.format(backward * 1e-6/1e-5))
 
         # Clipping (helps with exploding gradients) and then gradient descent
         nn.utils.clip_grad_norm_(model.parameters(), grad_clip)

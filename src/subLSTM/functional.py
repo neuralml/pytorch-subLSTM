@@ -6,7 +6,9 @@ import torch.nn.functional as F
 def slstm_cell(input, h_tm1, c_tm1, W, R, bi, bh):
     # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor) -> Tuple[Tensor, Tensor]
 
-    proj_input = torch.sigmoid(torch.addmm(bi, input, W) + torch.addmm(bh, h_tm1, R))
+    # proj_input = torch.sigmoid(torch.addmm(bi, input, W) + torch.addmm(bh, h_tm1, R))
+    # proj_input = torch.sigmoid(F.linear(input, W, bi) + F.linear(h_tm1, R, bh))
+    proj_input = torch.sigmoid(torch.addmm(bi, input, W.t()) + torch.addmm(bh, h_tm1, R.t()))
     in_gate, out_gate, z_t, f_gate = proj_input.chunk(4, 1)
 
     c_t = c_tm1 * f_gate + z_t * in_gate
@@ -19,7 +21,7 @@ def slstm_cell(input, h_tm1, c_tm1, W, R, bi, bh):
 def fslstm_cell(input, h_tm1, c_tm1, W, R, bi, bh, f_gate):
     # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor) -> Tuple[Tensor, Tensor]
 
-    proj_input = torch.sigmoid(torch.addmm(bi, input, W) + torch.addmm(bh, h_tm1, R))
+    proj_input = torch.sigmoid(torch.addmm(bi, input, W.t()) + torch.addmm(bh, h_tm1, R.t()))
 
     in_gate, out_gate, z_t = proj_input.chunk(3, 1)
     f_gate = f_gate.clamp(0, 1)
@@ -36,9 +38,9 @@ def sublstm_forward(input, hidden, weights, num_layers):
     timesteps = len(input)
     hx, cx = hidden
 
-    for l in range(num_layers):
-        weights[l*4] = weights[l*4].t()
-        weights[l*4+1] = weights[l*4+1].t()
+    # for l in range(num_layers):
+    #     weights[l*4] = weights[l*4].t()
+    #     weights[l*4+1] = weights[l*4+1].t()
 
     for time in range(timesteps):
         new_h, new_c = torch.zeros_like(hx), torch.zeros_like(cx)

@@ -1,0 +1,13 @@
+TESTED ON 784 time steps, input 1, batch size 16, 128 hidden units
+
+sublstm-gpu (addmm, pre-transpose) Forward: 920.139 us | Backward 2054.242 us
+sublstm-cpu (addmm, pre-transpose) Forward: 1136.209 us | Backward 818.864 us
+
+subLSTM-gpu (F.linear, no pre-transpose) Forward: 750.296 us | Backward 2243.962 us
+sublstm-cpu (F.linear, no pre-transpose) Forward 1148.169 us | Backward 1071.281 us
+
+subLSTM-gpu (addmm, no pre-transpose) Forward: 742.821 us | Backward 2249.010 us
+subLSTM-cpu (addmm, no pre-transpose) Forward: 1094.916 us | Backward 1021.565 us
+
+lstm-gpu Forward: 168.332 us | Backward 167.104 us
+lstm-cpu Forward: 1513.999 us | Backward 2920.285 us
