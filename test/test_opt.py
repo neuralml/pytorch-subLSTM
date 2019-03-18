@@ -9,7 +9,7 @@ batch_size = 16
 timesteps = 784
 input_features = 1
 trials = 1000
-device = 'cuda'
+device = 'cpu'
 
 X = torch.randn(timesteps, batch_size, input_features).to(device)
 h = torch.randn(n_layers, batch_size, state_size).to(device)
