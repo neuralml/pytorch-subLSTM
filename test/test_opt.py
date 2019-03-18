@@ -8,7 +8,7 @@ input_features = 1
 state_size = 128
 timesteps = 784
 n_layers = 1
-trials = 10
+trials = 100
 
 X = torch.randn(timesteps, batch_size, input_features)
 h = torch.randn(n_layers, batch_size, state_size)

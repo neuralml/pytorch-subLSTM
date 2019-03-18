@@ -8,57 +8,12 @@ from torch.nn.modules.activation import Sigmoid
 # from torch.nn.modules.rnn import PackedSequence
 # from torch.nn.utils.rnn import pack_padded_sequence as pack, pad_packed_sequence as pad
 
-from .functional import sublstm, fsublstm
-
-@torch.jit.script
-def _sublstm_forward(input, hidden, weights, num_layers):
-    # type: (List[Tensor], Tuple[Tensor, Tensor], List[List[Tensor]], int) -> Tuple[List[Tensor], Tuple[Tensor, Tensor]]
-    timesteps = len(input)
-    hx, cx = hidden
-
-    for time in range(timesteps):
-        new_h, new_c = torch.zeros_like(hx), torch.zeros_like(cx)
-        for l in range(num_layers):
-            W, R, bi, bh = weights[l]
-            h, c = sublstm(input[time], hx[l], cx[l], W, R, bi, bh)
-
-            # if l < num_layers - 1 and dropout:
-            #     out = dropout(out)
-
-            new_h[l], new_c[l] = h, c
-            input[time] = h
-
-        hx, cx = new_h, new_c
-
-    return input, (hx, cx)
-
-@torch.jit.script
-def _fsublstm_forward(input, hidden, weights, num_layers):
-    # type: (List[Tensor], Tuple[Tensor, Tensor], List[List[Tensor]], int) -> Tuple[List[Tensor], Tuple[Tensor, Tensor]]
-    timesteps = len(input)
-    hx, cx = hidden
-
-    for time in range(timesteps):
-        new_h, new_c = torch.zeros_like(hx), torch.zeros_like(cx)
-        for l in range(num_layers):
-            W, R, bi, bh, f_gate = weights[l]
-            h, c = fsublstm(input[time], hx[l], cx[l], W, R, bi, bh, f_gate)
-
-            # if l < num_layers - 1 and dropout:
-            #     out = dropout(out)
-
-            new_h[l], new_c[l] = h, c
-            input[time] = h
-
-        hx, cx = new_h, new_c
-
-    return input, (hx, cx)
-
+from .functional import sublstm_forward, fsublstm_forward
 
 # noinspection PyShadowingBuiltins,PyPep8Naming
 class SubLSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers=1, bias=True,
-                    fixed_forget=True, batch_first=False, dropout=0.0, bidirectional=False):
+                    fixed_forget=False, batch_first=True, dropout=0.0, bidirectional=False):
 
         super(SubLSTM, self).__init__()
 
@@ -70,7 +25,6 @@ class SubLSTM(nn.Module):
         self.batch_first = batch_first
         self.dropout = dropout
         self.bidirectional = bidirectional
-        self.mode = 'fix-subLSTM' if fixed_forget else 'subLSTM'
 
         if not isinstance(dropout, numbers.Number) or not 0 <= dropout <= 1 or \
                 isinstance(dropout, bool):
@@ -118,6 +72,10 @@ class SubLSTM(nn.Module):
 
         self.flatten_parameters()
         self.reset_parameters()
+
+    @property
+    def mode(self):
+        return 'fix-subLSTM' if self.fixed_forget else 'subLSTM'
 
     def flatten_parameters(self):
         """Resets parameter data pointer so that they can use faster code paths.
@@ -210,12 +168,13 @@ class SubLSTM(nn.Module):
         self.check_forward_args(input, hx, None)
 
         output = [input[i] for i in range(timesteps)]
+        weights = self._flat_weights
 
-        # if self.fixed_forget:
-        #     output, hidden = _fsublstm_forward(output, hx, self.all_weights, self.num_layers)
-        # else:
-        #     output, hidden  = _sublstm_forward(output, hx, self.all_weights, self.num_layers)
-        output, hidden  = _sublstm_forward(output, hx, self.all_weights, self.num_layers)
+        if self.fixed_forget:
+            output, hidden = fsublstm_forward(output, hx, weights, self.num_layers)
+        else:
+            output, hidden  = sublstm_forward(output, hx, weights, self.num_layers)
+
         output = torch.stack(output)
 
         if self.batch_first:
