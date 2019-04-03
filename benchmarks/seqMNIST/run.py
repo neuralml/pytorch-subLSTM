@@ -28,7 +28,7 @@ from utils import train, test, compute_accuracy
 parser = argparse.ArgumentParser(description='PyTorch Sequential MNIST LSTM model test')
 
 # Model parameters
-parser.add_argument('--model', type=str, default='subLSTM', 
+parser.add_argument('--model', type=str, default='subLSTM',
     help='RNN model tu use. One of subLSTM|fix-subLSTM|LSTM|GRU')
 parser.add_argument('--nlayers', type=int, default=1,
     help='number of layers')
@@ -130,7 +130,7 @@ model = init_model(
     model_type=args.model,
     n_layers=args.nlayers, hidden_size=args.nhid,
     input_size=input_size, output_size=10, class_task=True,
-    device=device
+    dropout=0.0, device=device
 )
 
 ########################################################################################
@@ -202,7 +202,7 @@ try:
 
         # Train model for 1 epoch over whole dataset
         epoch_trace = train(
-            model=model, data_loader=train_data, 
+            model=model, data_loader=train_data,
             criterion=criterion, optimizer=optimizer, grad_clip=args.clip,
             log_interval=log_interval,
             device=device,
@@ -242,7 +242,7 @@ try:
                     'loss': val_loss
                 }, f)
             best_loss = val_loss
-   
+
 except KeyboardInterrupt:
     if args.verbose:
         print('Keyboard interruption. Terminating training.')

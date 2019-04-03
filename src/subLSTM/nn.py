@@ -1,205 +1,188 @@
 import math
 from itertools import product
+import numbers
 
 import torch
 import torch.nn as nn
-from torch.nn.modules.rnn import RNNCellBase
+from torch.nn.modules.activation import Sigmoid
 # from torch.nn.modules.rnn import PackedSequence
 # from torch.nn.utils.rnn import pack_padded_sequence as pack, pad_packed_sequence as pad
 
-from .functional import fixSubLSTMCellF, SubLSTMCellF
-
-
-# noinspection PyPep8Naming,PyShadowingBuiltins
-class SubLSTMCell(RNNCellBase):
-    def __init__(self, input_size, hidden_size, bias=True, fix_subLSTM=False):
-        super(SubLSTMCell, self).__init__()
-
-        # Set the parameters
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.bias = bias
-        self._fix_f_gate = fix_subLSTM
-
-        gate_size = (3 if fix_subLSTM else 4) * hidden_size
-
-        self.W_i = nn.Parameter(torch.Tensor(gate_size, input_size))
-        self.W_h = nn.Parameter(torch.Tensor(gate_size, hidden_size))
-
-        if fix_subLSTM:
-            self.f_gate = nn.Parameter(torch.Tensor(hidden_size))
-
-        if bias:
-            self.b_i = nn.Parameter(torch.Tensor(gate_size))
-            self.b_h = nn.Parameter(torch.Tensor(gate_size))
-        else:
-            self.b_i, self.b_h = 0, 0
-
-        self.reset_parameters()
-
-    @property
-    def is_fix_subLSTM(self):
-        return self._fix_f_gate
-
-    def reset_parameters(self):
-        std = 1.0 / math.sqrt(self.hidden_size)
-        for weight in self.parameters():
-            weight.data.uniform_(-std, std)
-
-    def forward(self, input: torch.Tensor, hx=None):
-        self.check_forward_input(input)
-
-        if hx is None:
-            hx = input.new_zeros(input.size(0), self.hidden_size, requires_grad=False)
-            hx = (hx, hx)
-
-        self.check_forward_hidden(input, hx[0], '[0]')
-        self.check_forward_hidden(input, hx[1], '[1]')
-
-        if self._fix_f_gate:
-            return fixSubLSTMCellF(
-                input, hx, self.W_i, self.W_h, self.f_gate, self.b_i, self.b_h)
-        return SubLSTMCellF(input, hx, self.W_i, self.W_h, self.b_i, self.b_h)
-
+from .functional import sublstm_forward, fsublstm_forward
 
 # noinspection PyShadowingBuiltins,PyPep8Naming
 class SubLSTM(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers=1, bias=True,
-                    fixed_forget=True, batch_first=False):
+                    fixed_forget=False, batch_first=False, dropout=0.0, bidirectional=False):
 
         super(SubLSTM, self).__init__()
 
-        # Uncomment to get layers of different size. Disable for consistency with LSTM
-        # if isinstance(hidden_size, list) and len(hidden_size) != num_layers:
-        #     raise ValueError(
-        #         'Length of hidden_size list is not the same as num_layers.'
-        #         'Expected {0} got {1}'.format(
-        #             num_layers, len(hidden_size))
-        #     )
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.bias = bias
+        self.fixed_forget = fixed_forget
+        self.batch_first = batch_first
+        self.dropout = dropout
+        self.bidirectional = bidirectional
 
-        # if isinstance(hidden_size, int):
-        #     hidden_size = [hidden_size] * num_layers
+        if not isinstance(dropout, numbers.Number) or not 0 <= dropout <= 1 or \
+                isinstance(dropout, bool):
+            raise ValueError("dropout should be a number in range [0, 1] "
+                             "representing the probability of an element being "
+                             "zeroed")
+        # if dropout > 0 and num_layers == 1:
+        #     warnings.warn("dropout option adds dropout after all but last "
+        #                   "recurrent layer, so non-zero dropout expects "
+        #                   "num_layers greater than 1, but got dropout={} and "
+        #                   "num_layers={}".format(dropout, num_layers))
 
-        # Some python "magic" to assign all parameters as class attributes
-        self.__dict__.update(locals())
+        num_directions = 2 if bidirectional else 1
+        gate_size = (3 if fixed_forget else 4) * hidden_size
+        self._all_weights = []
 
-        num_gates = 3 if fixed_forget else 4
+        for layer in range(num_layers):
+            for direction in range(num_directions):
+                suffix = '_reverse' if direction == 1 else ''
+                layer_input_size = input_size if layer == 0 else hidden_size * num_directions
 
-        self._all_params = []
-        # Use for bidirectional later
-        suffix = ''
+                W = nn.Parameter(torch.Tensor(gate_size, layer_input_size))
+                R = nn.Parameter(torch.Tensor(gate_size, hidden_size))
 
-        for layer_num in range(num_layers):
+                if bias:
+                    bi = nn.Parameter(torch.Tensor(gate_size))
+                    bh = nn.Parameter(torch.Tensor(gate_size))
+                else:
+                    bi, bh = torch.tensor(0), torch.tensor(0)
 
-            layer_in_size = input_size if layer_num == 0 else hidden_size
-            layer_out_size = hidden_size
+                if fixed_forget:
+                    f = nn.Parameter(torch.Tensor(hidden_size))
 
-            gate_size = num_gates * layer_out_size
+                    layer_param = (W, R, bi, bh, f)
+                    name_template = ['W_{}{}', 'R_{}{}', 'bi_{}{}', 'bh_{}{}', 'f_{}{}']
+                else:
+                    layer_param  = (W, R, bi, bh)
+                    name_template = ['W_{}{}', 'R_{}{}', 'bi_{}{}', 'bh_{}{}']
 
-            w_i = nn.Parameter(torch.Tensor(gate_size, layer_in_size))
-            w_h = nn.Parameter(torch.Tensor(gate_size, layer_out_size))
+                param_names = [x.format(layer, suffix) for x in name_template]
+                for name, value in zip(param_names, layer_param):
+                    setattr(self, name, value)
 
-            layer_param = [w_i, w_h]
-            name_template = ['W_{}{}', 'R_{}{}']
-
-            if bias:
-                b_i = nn.Parameter(torch.Tensor(gate_size))
-                b_h = nn.Parameter(torch.Tensor(gate_size))
-            else:
-                b_i, b_h = 0, 0
-
-            layer_param.extend([b_i, b_h])
-            name_template.extend(['b_i_{}{}', 'b_r_{}{}'])
-
-            if fixed_forget:
-                f = nn.Parameter(torch.Tensor(hidden_size))
-
-                layer_param.append(f)
-                name_template.append('f_{}{}')
-
-            param_names = [x.format(layer_num, suffix) for x in name_template]
-            for name, value in zip(param_names, layer_param):
-                setattr(self, name, value)
-
-            self._all_params.append(param_names)
+                self._all_weights.append(param_names)
 
         self.flatten_parameters()
         self.reset_parameters()
 
     @property
-    def all_weights(self):
-        return [[getattr(self, name) for name in param_names] 
-            for param_names in self._all_params]
-
-    def reset_parameters(self):
-        stdv = 1.0 / math.sqrt(self.hidden_size)
-        for l in range(self.num_layers):
-            for weight in self.all_weights[l]:
-                weight.data.uniform_(-stdv, stdv)
+    def mode(self):
+        return 'fix-subLSTM' if self.fixed_forget else 'subLSTM'
 
     def flatten_parameters(self):
-        pass
+        """Resets parameter data pointer so that they can use faster code paths.
 
-    def forward(self, input, hx=None):
-        # TODO: Check docs later and add the packed sequence and seq2seq models
-        # is_packed = isinstance(input, PackedSequence)
-        #
-        # if is_packed:
-        #     input, batch_size = pad(input)
-        #     max_batch_size = batch_size[0]
-        # else:
-        #     batch_size = None
-        #     max_batch_size = input.size(0) if self.batch_first else input.size(1)
+        Right now, this works only if the module is on the GPU and cuDNN is enabled.
+        Otherwise, it's a no-op.
+        """
+        any_param = next(self.parameters()).data
+        if not any_param.is_cuda or not torch.backends.cudnn.is_acceptable(any_param):
+            return
 
-        max_batch_size = input.size(0) if self.batch_first else input.size(1)
+        # If any parameters alias, we fall back to the slower, copying code path. This is
+        # a sufficient check, because overlapping parameter buffers that don't completely
+        # alias would break the assumptions of the uniqueness check in
+        # Module.named_parameters().
+        all_weights = self._flat_weights
+        unique_data_ptrs = set(p.data_ptr() for p in all_weights)
+        if len(unique_data_ptrs) != len(all_weights):
+            return
 
-        if hx is None:
-            hx = []
-            for l in range(self.num_layers):
-                # use input.new_zeros so dtype and device are the same as the input's
-                hidden = input.new_zeros(
-                    (max_batch_size, self.hidden_size), requires_grad=False)
-                hx.append((hidden, hidden))
+        with torch.cuda.device_of(any_param):
+            import torch.backends.cudnn.rnn as rnn
 
-        Ws = self.all_weights
-        if self.batch_first:
-            input = input.transpose(0, 1)
-
-        timesteps = input.size(0)
-        outputs = [input[i] for i in range(timesteps)]
-
-        if self.fixed_forget:
-            def _forward(time, layer):
-                w_i, w_h, b_i, b_h, f = Ws[layer]
-                return fixSubLSTMCellF(
-                    outputs[time], hx[layer], w_i, w_h, f, b_i, b_h)
-        else:
-            def _forward(time, layer):
-                w_i, w_h, b_i, b_h = Ws[layer]
-                return SubLSTMCellF(
-                    outputs[time], hx[layer], w_i, w_h, b_i, b_h)
-
-
-        for time, layer in product(range(timesteps), range(self.num_layers)):
-            out, c = _forward(time, layer)
-
-            hx[layer] = (out, c)
-            outputs[time] = out
-
-        out = torch.stack(outputs)
-        if self.batch_first:
-            out = out.transpose(0, 1)
-
-        # TODO: Check docs later and add the packed sequence option
-        # if is_packed:
-        #     out = pack(out, batch_size)
-
-        return out, hx
+            # NB: This is a temporary hack while we still don't have Tensor
+            # bindings for ATen functions
+            with torch.no_grad():
+                # NB: this is an INPLACE function on all_weights, that's why the
+                # no_grad() is necessary.
+                torch._cudnn_rnn_flatten_weight(
+                    all_weights, (4 if self.bias else 2) + (1 if self.fixed_forget else 0),
+                    self.input_size, rnn.get_cudnn_mode('LSTM'), self.hidden_size, self.num_layers,
+                    self.batch_first, bool(self.bidirectional))
+        # pass
 
     def _apply(self, fn):
         ret = super(SubLSTM, self)._apply(fn)
         self.flatten_parameters()
         return ret
+
+    def reset_parameters(self):
+        stdv = 1.0 / math.sqrt(self.hidden_size)
+        for weight in self.parameters():
+            nn.init.uniform_(weight, -stdv, stdv)
+
+    def check_forward_args(self, input, hidden, batch_sizes):
+        is_input_packed = batch_sizes is not None
+        expected_input_dim = 2 if is_input_packed else 3
+        if input.dim() != expected_input_dim:
+            raise RuntimeError(
+                'input must have {} dimensions, got {}'.format(
+                    expected_input_dim, input.dim()))
+        if self.input_size != input.size(-1):
+            raise RuntimeError(
+                'input.size(-1) must be equal to input_size. Expected {}, got {}'.format(
+                    self.input_size, input.size(-1)))
+
+        if is_input_packed:
+            mini_batch = int(batch_sizes[0])
+        else:
+            mini_batch = input.size(0) if self.batch_first else input.size(1)
+
+        num_directions = 2 if self.bidirectional else 1
+        expected_hidden_size = (self.num_layers * num_directions,
+                                mini_batch, self.hidden_size)
+
+        def check_hidden_size(hx, expected_hidden_size, msg='Expected hidden size {}, got {}'):
+            if tuple(hx.size()) != expected_hidden_size:
+                raise RuntimeError(msg.format(expected_hidden_size, tuple(hx.size())))
+
+            check_hidden_size(hidden[0], expected_hidden_size,
+                                'Expected hidden[0] size {}, got {}')
+            check_hidden_size(hidden[1], expected_hidden_size,
+                                'Expected hidden[1] size {}, got {}')
+
+    def forward(self, input, hx=None):
+        if self.batch_first:
+            input = input.transpose(0, 1)
+
+        timesteps = input.size(0)
+        batch_size = input.size(1)
+
+        if hx is None:
+            # use input.new_zeros so dtype and device are the same as the input's
+            hx = input.new_zeros(
+                (self.num_layers, batch_size, self.hidden_size),
+                requires_grad=False
+            )
+            hx = (hx, hx)
+
+        self.check_forward_args(input, hx, None)
+
+        output = [input[i] for i in range(timesteps)]
+        weights = self._flat_weights
+
+        if self.fixed_forget:
+            output, hidden = fsublstm_forward(
+                output, hx, weights, self.num_layers, self.dropout, self.training)
+        else:
+            output, hidden  = sublstm_forward(
+                output, hx, weights, self.num_layers, self.dropout, self.training)
+
+        output = torch.stack(output)
+
+        if self.batch_first:
+            output = output.transpose(0, 1)
+
+        return output, hidden
 
     def extra_repr(self):
         s = '{input_size}, {hidden_size}'
@@ -209,8 +192,16 @@ class SubLSTM(nn.Module):
             s += ', bias={bias}'
         if self.batch_first is not False:
             s += ', batch_first={batch_first}'
-        # if self.dropout != 0:
-        #     s += ', dropout={dropout}'
-        # if self.bidirectional is not False:
-        #     s += ', bidirectional={bidirectional}'
+        if self.dropout != 0:
+            s += ', dropout={dropout}'
+        if self.bidirectional is not False:
+            s += ', bidirectional={bidirectional}'
         return s.format(**self.__dict__)
+
+    @property
+    def _flat_weights(self):
+        return [p for layerparams in self.all_weights for p in layerparams]
+
+    @property
+    def all_weights(self):
+        return [[getattr(self, weight) for weight in weights] for weights in self._all_weights]

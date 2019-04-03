@@ -1,12 +1,13 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import time
 
 
 def detach_hidden_state(hidden_state):
     """
     Use this method to detach the hidden state from the previous batch's history.
-    This way we can carry hidden states values across training which improves 
+    This way we can carry hidden states values across training which improves
     convergence  while avoiding multiple initializations and autograd computations
     all the way back to the start of start of training.
     """
@@ -47,8 +48,8 @@ def train(model, data_loader, criterion, optimizer, grad_clip,
 
         # Forward and backward steps
         outputs, hidden = model(inputs, hidden)
-
         loss = criterion(outputs, labels)
+
         loss.backward()
 
         # Clipping (helps with exploding gradients) and then gradient descent

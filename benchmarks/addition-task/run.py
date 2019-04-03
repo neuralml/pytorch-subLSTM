@@ -26,12 +26,14 @@ from utils import train, test
 parser = argparse.ArgumentParser(description='Addition task')
 
 # Model parameters
-parser.add_argument('--model', type=str, default='subLSTM', 
+parser.add_argument('--model', type=str, default='subLSTM',
     help='RNN model tu use. One of subLSTM|fix-subLSTM|LSTM|GRU')
 parser.add_argument('--nlayers', type=int, default=1,
     help='number of layers')
 parser.add_argument('--nhid', type=int, default=50,
     help='number of hidden units per layer')
+parser.add_argument('--dropout', type=float, default=0.0,
+    help='drop probability for Bernoulli Dropout')
 parser.add_argument('--gact', type=str, default='relu',
     help='gate activation function relu|sig')
 parser.add_argument('--gbias', type=float, default=0,
@@ -159,7 +161,8 @@ model = init_model(
     model_type=args.model,
     n_layers=args.nlayers, hidden_size=args.nhid,
     input_size=input_size, output_size=responses, class_task=False,
-    device=device
+    device=device,
+    dropout=args.dropout
 )
 
 ########################################################################################
@@ -231,7 +234,7 @@ try:
 
         # Train model for 1 epoch over whole dataset
         epoch_trace = train(
-            model=model, data_loader=training_data, 
+            model=model, data_loader=training_data,
             criterion=criterion, optimizer=optimizer, grad_clip=args.clip,
             log_interval=log_interval,
             device=device,
@@ -263,7 +266,7 @@ try:
                     'loss': val_loss
                 }, f)
             best_loss = val_loss
-   
+
 except KeyboardInterrupt:
     if args.verbose:
         print('Keyboard interruption. Terminating training.')
