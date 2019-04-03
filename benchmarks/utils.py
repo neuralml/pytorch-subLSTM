@@ -7,7 +7,7 @@ import time
 def detach_hidden_state(hidden_state):
     """
     Use this method to detach the hidden state from the previous batch's history.
-    This way we can carry hidden states values across training which improves 
+    This way we can carry hidden states values across training which improves
     convergence  while avoiding multiple initializations and autograd computations
     all the way back to the start of start of training.
     """
@@ -41,24 +41,16 @@ def train(model, data_loader, criterion, optimizer, grad_clip,
         # Set all gradients to zero.
         optimizer.zero_grad()
 
-        # If reusing hidden states, detach them from the computation graph 
-        # of the previous batch. Using the previous value may speed up training 
+        # If reusing hidden states, detach them from the computation graph
+        # of the previous batch. Using the previous value may speed up training
         # but detaching is needed to avoid backprogating to the start of training.
         hidden = detach_hidden_state(hidden) if track_hidden else None
 
         # Forward and backward steps
-        start = time.time()
         outputs, hidden = model(inputs, hidden)
-        forward = time.time() - start
-
         loss = criterion(outputs, labels)
 
-        start = time.time()
         loss.backward()
-        backward = time.time() - start
-
-        print('Forward: {} us'.format(forward * 1e-6/1e-5))
-        print('Backward: {} us'.format(backward * 1e-6/1e-5))
 
         # Clipping (helps with exploding gradients) and then gradient descent
         nn.utils.clip_grad_norm_(model.parameters(), grad_clip)

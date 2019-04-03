@@ -210,8 +210,6 @@ try:
             verbose=args.verbose
         )
 
-        print((time.time() - start_time) * 1e6/1e5)
-
         loss_trace.extend(epoch_trace)
 
         # Check validation loss
