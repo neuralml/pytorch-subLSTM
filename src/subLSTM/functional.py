@@ -8,7 +8,7 @@ def slstm_cell(input, h_tm1, c_tm1, W, R, bi, bh):
     proj_input = torch.sigmoid(torch.addmm(bi, input, W.t()) + torch.addmm(bh, h_tm1, R.t()))
     in_gate, out_gate, z_t, f_gate = proj_input.chunk(4, 1)
 
-    c_t = c_tm1 * f_gate + z_t * in_gate
+    c_t = c_tm1 * f_gate + z_t - in_gate
     h_t = torch.sigmoid(c_t) - out_gate
 
     return h_t, c_t
@@ -57,10 +57,6 @@ def fsublstm_forward(input, hidden, weights, num_layers, dropout, training):
     # type: (List[Tensor], Tuple[Tensor, Tensor], List[Tensor], int, float, bool) -> Tuple[List[Tensor], Tuple[Tensor, Tensor]]
     timesteps = len(input)
     hx, cx = hidden
-
-    for l in range(len(weights)):
-        weights[l*5] = weights[l*5].t()
-        weights[l*5+1] = weights[l*5+1].t()
 
     for time in range(timesteps):
         new_h, new_c = torch.zeros_like(hx), torch.zeros_like(cx)
