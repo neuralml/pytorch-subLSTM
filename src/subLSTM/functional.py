@@ -34,22 +34,23 @@ def sublstm_forward(input, hidden, weights, num_layers, dropout, training):
     # type: (List[Tensor], Tuple[Tensor, Tensor], List[Tensor], int, float, bool) -> Tuple[List[Tensor], Tuple[Tensor, Tensor]]
     timesteps = len(input)
     hx, cx = hidden
+    output = input
 
     for time in range(timesteps):
         new_h, new_c = torch.zeros_like(hx), torch.zeros_like(cx)
         for l in range(num_layers):
             W, R, bi, bh = weights[4*l: 4*(l + 1)]
-            h, c = slstm_cell(input[time], hx[l], cx[l], W, R, bi, bh)
+            h, c = slstm_cell(output[time], hx[l], cx[l], W, R, bi, bh)
 
             if l < num_layers - 1 and dropout > 0:
                 h = F.dropout(h, dropout, training)
 
             new_h[l], new_c[l] = h, c
-            input[time] = h
+            output[time] = h
 
         hx, cx = new_h, new_c
 
-    return input, (hx, cx)
+    return output, (hx, cx)
 
 
 @torch.jit.script
@@ -57,19 +58,20 @@ def fsublstm_forward(input, hidden, weights, num_layers, dropout, training):
     # type: (List[Tensor], Tuple[Tensor, Tensor], List[Tensor], int, float, bool) -> Tuple[List[Tensor], Tuple[Tensor, Tensor]]
     timesteps = len(input)
     hx, cx = hidden
+    output = input
 
     for time in range(timesteps):
         new_h, new_c = torch.zeros_like(hx), torch.zeros_like(cx)
         for l in range(num_layers):
             W, R, bi, bh, f_gate = weights[5*l: 5*(l + 1)]
-            h, c = fslstm_cell(input[time], hx[l], cx[l], W, R, bi, bh, f_gate)
+            h, c = fslstm_cell(output[time], hx[l], cx[l], W, R, bi, bh, f_gate)
 
             if l < num_layers - 1 and dropout > 0:
                 h = F.dropout(h, dropout, training)
 
             new_h[l], new_c[l] = h, c
-            input[time] = h
+            output[time] = h
 
         hx, cx = new_h, new_c
 
-    return input, (hx, cx)
+    return output, (hx, cx)
