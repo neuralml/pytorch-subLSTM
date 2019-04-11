@@ -171,9 +171,11 @@ class SubLSTM(nn.Module):
         weights = self._flat_weights
 
         if self.fixed_forget:
-            output, hidden = fsublstm_forward(output, hx, weights, self.num_layers)
+            output, hidden = fsublstm_forward(
+                output, hx, weights, self.num_layers, self.dropout, self.training)
         else:
-            output, hidden  = sublstm_forward(output, hx, weights, self.num_layers)
+            output, hidden  = sublstm_forward(
+                output, hx, weights, self.num_layers, self.dropout, self.training)
 
         output = torch.stack(output)
 

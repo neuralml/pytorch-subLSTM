@@ -1,7 +1,11 @@
+import sys
 import torch
 import time
-from subLSTM.nn import SubLSTM
 from torch.nn import LSTM
+
+sys.path.insert(0, '../src/')
+
+from subLSTM.nn import SubLSTM
 
 n_layers = 1
 state_size = 128
@@ -21,6 +25,7 @@ def run(model):
     for _ in range(trials):
         start = time.time()
         out, (new_h, new_C) = model(X, (h, C))
+
         forward += time.time() - start
 
         start = time.time()
