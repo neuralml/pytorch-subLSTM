@@ -54,6 +54,8 @@ std::vector<at::Tensor> sLSTM_cell_backward(
     // Compute the gradients
     // auto grad_W = t_grads.mm(in_t);
     // auto grad_R = t_grads.mm(h_tm1);
+
+    // TODO: Need this fix because the loop and the cells are not fused into one op
     auto grad_W = in_t.t().mm(grads);
     auto grad_R = h_tm1.t().mm(grads);
     auto grad_bias = grads.sum(/*dim=*/0, /*keepdim=*/true);

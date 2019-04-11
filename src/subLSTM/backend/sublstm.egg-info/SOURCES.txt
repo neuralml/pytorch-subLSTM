@@ -1,0 +1,6 @@
+setup.py
+subLSTM.cpp
+sublstm.egg-info/PKG-INFO
+sublstm.egg-info/SOURCES.txt
+sublstm.egg-info/dependency_links.txt
+sublstm.egg-info/top_level.txt
